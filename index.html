@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abdus Saboor Asad — Bid Manager & Presales Professional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0d0d14;
+    --cream: #f7f4ef;
+    --gold: #c9a84c;
+    --gold-light: #e8d59a;
+    --gold-dim: rgba(201,168,76,0.15);
+    --steel: #2a2d3e;
+    --muted: #6b6f82;
+    --border: rgba(201,168,76,0.25);
+    --white: #ffffff;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; font-size: 16px; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--ink);
+    color: var(--cream);
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE TEXTURE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* ── NAVIGATION ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 1.25rem 4rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(13,13,20,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    transition: all 0.3s ease;
+  }
+
+  .nav-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--gold);
+    text-decoration: none;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 2.5rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--cream);
+    text-decoration: none;
+    opacity: 0.75;
+    transition: opacity 0.2s, color 0.2s;
+  }
+
+  .nav-links a:hover { opacity: 1; color: var(--gold); }
+
+  .nav-cta {
+    padding: 0.55rem 1.4rem;
+    border: 1px solid var(--gold);
+    color: var(--gold) !important;
+    border-radius: 2px;
+    opacity: 1 !important;
+    transition: background 0.2s !important;
+  }
+
+  .nav-cta:hover { background: var(--gold-dim) !important; }
+
+  /* Hamburger */
+  .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
+  .hamburger span { display: block; width: 24px; height: 2px; background: var(--cream); transition: all 0.3s; }
+
+  /* ── HERO ── */
+  #hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8rem 5rem 6rem 8rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.2s forwards;
+  }
+
+  .hero-tag::before {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 1px;
+    background: var(--gold);
+  }
+
+  .hero-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(3rem, 5.5vw, 5.5rem);
+    font-weight: 300;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    color: var(--white);
+    margin-bottom: 0.3rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.35s forwards;
+  }
+
+  .hero-name em {
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  .hero-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.1rem, 2vw, 1.6rem);
+    font-weight: 300;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.5s forwards;
+  }
+
+  .hero-summary {
+    font-size: 0.95rem;
+    font-weight: 300;
+    line-height: 1.8;
+    color: rgba(247,244,239,0.75);
+    max-width: 500px;
+    margin-bottom: 3rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.65s forwards;
+  }
+
+  .hero-summary strong { color: var(--gold-light); font-weight: 500; }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.8s forwards;
+  }
+
+  .btn-primary {
+    padding: 0.85rem 2.2rem;
+    background: var(--gold);
+    color: var(--ink);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 2px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(201,168,76,0.3);
+  }
+
+  .btn-outline {
+    padding: 0.85rem 2.2rem;
+    border: 1px solid rgba(247,244,239,0.3);
+    color: var(--cream);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 2px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .btn-outline:hover { border-color: var(--gold); background: var(--gold-dim); }
+
+  .hero-right {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hero-graphic {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hero-rings {
+    position: relative;
+    width: 480px;
+    height: 480px;
+    opacity: 0;
+    animation: fadeIn 1.2s 0.4s forwards;
+  }
+
+  .ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    animation: rotate 20s linear infinite;
+  }
+
+  .ring:nth-child(1) { inset: 0; }
+  .ring:nth-child(2) { inset: 40px; animation-duration: 30s; animation-direction: reverse; }
+  .ring:nth-child(3) { inset: 90px; animation-duration: 45s; }
+
+  .ring::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: var(--gold);
+    border-radius: 50%;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 12px var(--gold);
+  }
+
+  .hero-center {
+    position: absolute;
+    inset: 140px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(201,168,76,0.08), rgba(42,45,62,0.4));
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .hero-center-stat {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 3rem;
+    font-weight: 600;
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  .hero-center-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.3rem;
+  }
+
+  /* Floating stats */
+  .hero-stat-badge {
+    position: absolute;
+    background: var(--steel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.75rem 1.2rem;
+    text-align: center;
+    opacity: 0;
+    animation: fadeIn 1s forwards;
+  }
+
+  .hero-stat-badge:nth-child(2) { top: 15%; right: 8%; animation-delay: 1s; }
+  .hero-stat-badge:nth-child(3) { bottom: 20%; right: 5%; animation-delay: 1.2s; }
+  .hero-stat-badge:nth-child(4) { bottom: 35%; left: 5%; animation-delay: 1.4s; }
+
+  .stat-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--gold);
+    display: block;
+  }
+
+  .stat-lbl {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Diagonal divider */
+  .hero-divider {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--border) 30%, var(--border) 70%, transparent);
+    z-index: 1;
+  }
+
+  /* ── SECTIONS ── */
+  section {
+    padding: 6rem 0;
+    position: relative;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 4rem;
+  }
+
+  .section-header {
+    margin-bottom: 4rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .section-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--gold);
+    opacity: 0.6;
+    letter-spacing: 0.1em;
+  }
+
+  .section-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2rem, 3.5vw, 3rem);
+    font-weight: 300;
+    letter-spacing: -0.01em;
+    color: var(--white);
+    position: relative;
+  }
+
+  .section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 0;
+    width: 40px;
+    height: 2px;
+    background: var(--gold);
+  }
+
+  .section-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    margin-left: 1rem;
+  }
+
+  /* ── ABOUT / EXPERTISE ── */
+  #about { background: var(--ink); }
+
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 5rem;
+    align-items: start;
+  }
+
+  .about-text p {
+    font-size: 1.05rem;
+    font-weight: 300;
+    line-height: 1.9;
+    color: rgba(247,244,239,0.8);
+    margin-bottom: 1.5rem;
+  }
+
+  .about-text p strong { color: var(--gold-light); font-weight: 500; }
+
+  .highlight-card {
+    background: linear-gradient(135deg, rgba(201,168,76,0.08), transparent);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1.8rem;
+    margin-top: 2rem;
+  }
+
+  .highlight-card-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1rem;
+  }
+
+  .highlight-card p {
+    font-size: 0.92rem;
+    line-height: 1.7;
+    color: rgba(247,244,239,0.7);
+    margin: 0;
+  }
+
+  .expertise-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .expertise-item {
+    padding: 1.2rem 1.5rem;
+    border: 1px solid rgba(201,168,76,0.15);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(42,45,62,0.3);
+    transition: border-color 0.2s, background 0.2s, transform 0.2s;
+    cursor: default;
+  }
+
+  .expertise-item:hover {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.06);
+    transform: translateX(4px);
+  }
+
+  .expertise-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--gold-dim);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .expertise-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--cream);
+  }
+
+  /* ── EXPERIENCE ── */
+  #experience { background: linear-gradient(to bottom, var(--ink), rgba(42,45,62,0.2)); }
+
+  .timeline {
+    position: relative;
+    padding-left: 2rem;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, var(--gold), rgba(201,168,76,0.1));
+  }
+
+  .timeline-item {
+    position: relative;
+    padding-left: 3rem;
+    padding-bottom: 4rem;
+  }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 6px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 16px rgba(201,168,76,0.5);
+  }
+
+  .timeline-meta {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    margin-bottom: 0.8rem;
+    flex-wrap: wrap;
+  }
+
+  .timeline-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    background: var(--gold-dim);
+    padding: 0.25rem 0.75rem;
+    border-radius: 2px;
+  }
+
+  .timeline-company {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .timeline-role {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem;
+    font-weight: 400;
+    color: var(--white);
+    margin-bottom: 1.2rem;
+    line-height: 1.2;
+  }
+
+  .timeline-desc {
+    font-size: 0.9rem;
+    font-weight: 300;
+    line-height: 1.8;
+    color: rgba(247,244,239,0.7);
+    margin-bottom: 1.5rem;
+  }
+
+  .achievement-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .achievement-item {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.88rem;
+    font-weight: 300;
+    color: rgba(247,244,239,0.75);
+    line-height: 1.6;
+  }
+
+  .achievement-item::before {
+    content: '◆';
+    color: var(--gold);
+    font-size: 0.5rem;
+    margin-top: 0.45rem;
+    flex-shrink: 0;
+  }
+
+  .achievement-item strong { color: var(--gold-light); font-weight: 500; }
+
+  .deal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding: 0.6rem 1.2rem;
+    background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.05));
+    border: 1px solid rgba(201,168,76,0.4);
+    border-radius: 3px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--gold-light);
+    letter-spacing: 0.05em;
+  }
+
+  /* ── SKILLS ── */
+  #skills { background: var(--ink); }
+
+  .skills-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+  }
+
+  .skills-group-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1.8rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  .skill-tag {
+    padding: 0.45rem 0.9rem;
+    font-size: 0.78rem;
+    font-weight: 400;
+    border-radius: 2px;
+    letter-spacing: 0.03em;
+    transition: all 0.2s;
+  }
+
+  .skill-tag-primary {
+    background: rgba(201,168,76,0.12);
+    border: 1px solid rgba(201,168,76,0.3);
+    color: var(--gold-light);
+  }
+
+  .skill-tag-primary:hover {
+    background: rgba(201,168,76,0.22);
+    border-color: var(--gold);
+  }
+
+  .skill-tag-secondary {
+    background: rgba(42,45,62,0.6);
+    border: 1px solid rgba(107,111,130,0.3);
+    color: rgba(247,244,239,0.7);
+  }
+
+  .skill-tag-secondary:hover {
+    background: rgba(42,45,62,0.9);
+    border-color: var(--muted);
+    color: var(--cream);
+  }
+
+  .tech-areas {
+    margin-top: 3rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .tech-card {
+    background: rgba(42,45,62,0.4);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .tech-card:hover {
+    border-color: rgba(201,168,76,0.5);
+    transform: translateY(-3px);
+  }
+
+  .tech-card-icon { font-size: 1.6rem; margin-bottom: 0.6rem; }
+
+  .tech-card-name {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--cream);
+    margin-bottom: 0.3rem;
+  }
+
+  .tech-card-items {
+    font-size: 0.68rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ── ACHIEVEMENTS ── */
+  #achievements { background: rgba(42,45,62,0.15); }
+
+  .achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  .achievement-card {
+    background: rgba(13,13,20,0.6);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .achievement-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+  }
+
+  .achievement-card:hover {
+    border-color: rgba(201,168,76,0.4);
+    transform: translateY(-4px);
+  }
+
+  .achievement-card-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .achievement-card-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: var(--gold);
+    line-height: 1;
+    margin-bottom: 0.4rem;
+  }
+
+  .achievement-card-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--white);
+    margin-bottom: 0.6rem;
+  }
+
+  .achievement-card-desc {
+    font-size: 0.8rem;
+    font-weight: 300;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ── EDUCATION & CERT ── */
+  #education { background: var(--ink); }
+
+  .edu-cert-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 4rem;
+  }
+
+  .edu-item {
+    display: flex;
+    gap: 1.5rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2.5rem;
+  }
+
+  .edu-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+  .edu-grade {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.7rem;
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    margin-top: 0.5rem;
+  }
+
+  .grade-distinction { background: rgba(201,168,76,0.15); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
+  .grade-first { background: rgba(107,111,130,0.2); color: var(--muted); border: 1px solid rgba(107,111,130,0.3); }
+
+  .edu-marker {
+    width: 10px;
+    height: 10px;
+    background: var(--gold);
+    border-radius: 50%;
+    margin-top: 0.5rem;
+    flex-shrink: 0;
+    box-shadow: 0 0 12px rgba(201,168,76,0.4);
+  }
+
+  .edu-degree {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: var(--white);
+    margin-bottom: 0.3rem;
+  }
+
+  .edu-institution {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .cert-card {
+    background: linear-gradient(135deg, rgba(201,168,76,0.1), rgba(42,45,62,0.4));
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2rem;
+    position: relative;
+  }
+
+  .cert-badge-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .cert-org {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.5rem;
+  }
+
+  .cert-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.3rem;
+    font-weight: 400;
+    color: var(--white);
+    margin-bottom: 0.8rem;
+    line-height: 1.3;
+  }
+
+  .cert-detail {
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .cert-valid {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 1rem;
+    padding: 0.35rem 0.8rem;
+    background: rgba(201,168,76,0.12);
+    border-radius: 20px;
+    font-size: 0.7rem;
+    color: var(--gold);
+    font-weight: 500;
+  }
+
+  .cert-valid::before {
+    content: '✓';
+    font-size: 0.75rem;
+  }
+
+  /* ── CONTACT ── */
+  #contact {
+    background: linear-gradient(135deg, rgba(42,45,62,0.3), var(--ink));
+    padding-bottom: 0;
+  }
+
+  .contact-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5rem;
+    padding-bottom: 6rem;
+  }
+
+  .contact-intro {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.6rem, 2.5vw, 2.2rem);
+    font-weight: 300;
+    color: var(--white);
+    line-height: 1.4;
+    margin-bottom: 1.5rem;
+  }
+
+  .contact-intro em { font-style: italic; color: var(--gold); }
+
+  .contact-sub {
+    font-size: 0.92rem;
+    font-weight: 300;
+    color: rgba(247,244,239,0.65);
+    line-height: 1.8;
+    margin-bottom: 2.5rem;
+  }
+
+  .contact-links {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .contact-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.4rem;
+    background: rgba(42,45,62,0.4);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    text-decoration: none;
+    transition: border-color 0.2s, background 0.2s, transform 0.2s;
+  }
+
+  .contact-link:hover {
+    border-color: var(--gold);
+    background: var(--gold-dim);
+    transform: translateX(4px);
+  }
+
+  .contact-link-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .contact-link-info { flex: 1; }
+
+  .contact-link-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.2rem;
+  }
+
+  .contact-link-value {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--cream);
+  }
+
+  .contact-link-arrow {
+    color: var(--gold);
+    opacity: 0.5;
+    font-size: 1rem;
+    transition: opacity 0.2s;
+  }
+
+  .contact-link:hover .contact-link-arrow { opacity: 1; }
+
+  /* Footer strip */
+  .footer-strip {
+    border-top: 1px solid var(--border);
+    padding: 2rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .footer-strip span:first-child {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.9rem;
+    color: rgba(247,244,239,0.4);
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Scroll reveal */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── MOBILE NAV ── */
+  @media (max-width: 1024px) {
+    #hero { grid-template-columns: 1fr; }
+    .hero-left { padding: 8rem 3rem 4rem; max-width: 700px; margin: auto; }
+    .hero-right { display: none; }
+    .hero-divider { display: none; }
+    .about-grid { grid-template-columns: 1fr; gap: 3rem; }
+    .skills-layout { grid-template-columns: 1fr; }
+    .achievements-grid { grid-template-columns: 1fr 1fr; }
+    .edu-cert-grid { grid-template-columns: 1fr; }
+    .contact-wrapper { grid-template-columns: 1fr; gap: 3rem; }
+    .tech-areas { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 768px) {
+    nav { padding: 1rem 1.5rem; }
+    .nav-links { display: none; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; background: rgba(13,13,20,0.98); padding: 1.5rem; gap: 1.2rem; border-bottom: 1px solid var(--border); }
+    .nav-links.open { display: flex; }
+    .hamburger { display: flex; }
+    .container { padding: 0 1.5rem; }
+    section { padding: 4rem 0; }
+    .hero-left { padding: 7rem 1.5rem 3rem; }
+    .achievements-grid { grid-template-columns: 1fr; }
+    .tech-areas { grid-template-columns: 1fr 1fr; }
+    .footer-strip { flex-direction: column; gap: 0.5rem; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="navbar">
+  <a class="nav-logo" href="#hero">ASAD</a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#about">About</a></li>
+    <li><a href="#experience">Experience</a></li>
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#achievements">Achievements</a></li>
+    <li><a href="#education">Education</a></li>
+    <li><a href="#contact" class="nav-cta">Connect</a></li>
+  </ul>
+  <div class="hamburger" onclick="toggleNav()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-left">
+    <span class="hero-tag">Bid Manager & Presales Professional</span>
+    <h1 class="hero-name">Abdus Saboor<br><em>Asad</em></h1>
+    <p class="hero-title">Senior Presales Analyst · NetEnrich Technologies</p>
+    <p class="hero-summary">
+      <strong>~7 years</strong> driving end-to-end RFP responses, commercial governance, and proposal strategy across <strong>IT infrastructure management, cybersecurity, and cloud domains</strong>. Skilled at orchestrating cross-functional teams and securing multi-million-dollar deals.
+    </p>
+    <div class="hero-actions">
+      <a href="#contact" class="btn-primary">Get In Touch</a>
+      <a href="#experience" class="btn-outline">View Experience</a>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="hero-divider"></div>
+    <div class="hero-graphic">
+      <div class="hero-rings">
+        <div class="ring"></div>
+        <div class="ring"></div>
+        <div class="ring"></div>
+        <div class="hero-center">
+          <div class="hero-center-stat">$15M</div>
+          <div class="hero-center-label">TCV Deal Led</div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-stat-badge">
+      <span class="stat-num">7+</span>
+      <span class="stat-lbl">Years Experience</span>
+    </div>
+    <div class="hero-stat-badge">
+      <span class="stat-num">25%</span>
+      <span class="stat-lbl">TAT Reduction</span>
+    </div>
+    <div class="hero-stat-badge">
+      <span class="stat-num">30%</span>
+      <span class="stat-lbl">Fewer Escalations</span>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-num">01</span>
+      <h2 class="section-title">About Me</h2>
+      <div class="section-line"></div>
+    </div>
+    <div class="about-grid">
+      <div class="about-text reveal">
+        <p>
+          I am a Presales and Bid Management professional with around <strong>7 years of experience</strong> in RFP/RFI/RFQ responses, proposal strategy, and commercial governance across <strong>Infrastructure Managed Services (NOC, Data Center, Cloud), ITOM-based solutions, and Cybersecurity SaaS</strong>.
+        </p>
+        <p>
+          My proven track record includes orchestrating cross-functional teams, crafting customer-centric win themes, designing cost-effective service models, and managing complex bids — including a landmark <strong>$15M TCV NOC transformation deal</strong>.
+        </p>
+        <p>
+          I thrive under pressure, consistently delivering compliant, compelling proposals while protecting margins and meeting tight deadlines. Based in <strong>Hyderabad, India</strong>, I collaborate across global sales and delivery teams.
+        </p>
+        <div class="highlight-card">
+          <div class="highlight-card-title">Technology Focus Areas</div>
+          <p>Cybersecurity (SIEM, Network Security) · Modern Networking · Modern DC · Azure · AWS · Hybrid Cloud · Enterprise Applications · Unified Communication · End-User Computing</p>
+        </div>
+      </div>
+
+      <div class="expertise-grid reveal">
+        <div class="expertise-item">
+          <div class="expertise-icon">🎯</div>
+          <span class="expertise-name">End-to-End RFP/RFI/RFQ Management</span>
+        </div>
+        <div class="expertise-item">
+          <div class="expertise-icon">🔒</div>
+          <span class="expertise-name">Cybersecurity SaaS (MDR, SOC, SIEM, Zero Trust)</span>
+        </div>
+        <div class="expertise-item">
+          <div class="expertise-icon">☁️</div>
+          <span class="expertise-name">Infrastructure Managed Services (NOC, DC, Cloud)</span>
+        </div>
+        <div class="expertise-item">
+          <div class="expertise-icon">💰</div>
+          <span class="expertise-name">Pricing Models & Commercial Governance</span>
+        </div>
+        <div class="expertise-item">
+          <div class="expertise-icon">🏆</div>
+          <span class="expertise-name">Win Themes & Executive Summaries</span>
+        </div>
+        <div class="expertise-item">
+          <div class="expertise-icon">🔄</div>
+          <span class="expertise-name">NOC Transformations & Service Design</span>
+        </div>
+        <div class="expertise-item">
+          <div class="expertise-icon">📋</div>
+          <span class="expertise-name">SOW, Order Forms & Contract Preparation</span>
+        </div>
+        <div class="expertise-item">
+          <div class="expertise-icon">🤝</div>
+          <span class="expertise-name">Customer Engagement & Executive Briefings</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EXPERIENCE -->
+<section id="experience">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-num">02</span>
+      <h2 class="section-title">Experience</h2>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="timeline">
+      <!-- NetEnrich -->
+      <div class="timeline-item reveal">
+        <div class="timeline-meta">
+          <span class="timeline-date">May 2019 — Present</span>
+          <span class="timeline-company">NetEnrich Technologies</span>
+        </div>
+        <h3 class="timeline-role">Senior Presales Analyst</h3>
+        <p class="timeline-desc">
+          Part of the leadership team, working on a day-to-day basis with sales-strategy and delivery-strategy teams to brainstorm, strategize, plan, implement, review and retrospect progress towards organizational goals. Responsible for responding to RFPs/RFIs/RFQs and developing solutions across Managed Services for NOC, Data Center, Unified Communications, Cloud, and Cybersecurity services.
+        </p>
+
+        <div class="achievement-list">
+          <div class="achievement-item">Delivered presales and proposal support for <strong>IT Managed Services, NOC transformations, cloud operations, and cybersecurity services</strong>.</div>
+          <div class="achievement-item">Designed cost-effective <strong>infrastructure managed services models</strong> across NOC, DC, and Cloud, aligning technical capabilities with business outcomes.</div>
+          <div class="achievement-item">Developed <strong>ITOM-based solutions</strong> for infrastructure monitoring, alert management, and automation.</div>
+          <div class="achievement-item">Created solution documents, RFP/RFI/RFQ responses, SOWs, effort estimates, order forms, pricing models, and transition plans.</div>
+          <div class="achievement-item">Orchestrated <strong>sales, delivery, finance, and SMEs</strong> to deliver compliant, customer-centric proposals under tight deadlines.</div>
+          <div class="achievement-item">Built <strong>compliance matrices</strong> and developed <strong>win themes</strong> aligned to client business outcomes.</div>
+          <div class="achievement-item">Collaborated with senior management to structure <strong>pricing models</strong> ensuring competitiveness and margin protection; managed discount governance workflows.</div>
+          <div class="achievement-item">Facilitated large-scale <strong>Remote Operations Center (ROC)</strong> transitions, securing executive buy-in and ensuring delivery readiness.</div>
+          <div class="achievement-item">Specialized in <strong>cybersecurity SaaS solutions</strong> — MDR, SOC, SIEM, and SOAR.</div>
+          <div class="achievement-item">Maintained a <strong>knowledge repository</strong> of past responses, reducing turnaround time by 25%.</div>
+          <div class="achievement-item">Supported contract negotiation by drafting and reviewing <strong>Statements of Work (SOWs)</strong>, order forms, and Terms & Conditions.</div>
+        </div>
+
+        <div class="deal-badge">
+          🏆 Landmark Achievement: Led $15M TCV NOC Transformation Deal
+        </div>
+      </div>
+
+      <!-- Entrepreneurship -->
+      <div class="timeline-item reveal">
+        <div class="timeline-meta">
+          <span class="timeline-date">Dec 2016 — Feb 2019</span>
+          <span class="timeline-company">Self-Employed</span>
+        </div>
+        <h3 class="timeline-role">Entrepreneur & Freelance Developer</h3>
+        <p class="timeline-desc">
+          Acquired and delivered multiple web application projects for local and global clients, building strong technical and project management capabilities.
+        </p>
+        <div class="achievement-list">
+          <div class="achievement-item">Delivered full-stack web projects for clients including <strong>ustpa.us, infraamerican.com,</strong> and <strong>rmflogistics.com</strong>.</div>
+          <div class="achievement-item">Developed expertise in <strong>PHP, JavaScript, HTML5, and CSS3</strong> alongside video production skills.</div>
+          <div class="achievement-item">Managed end-to-end client relationships — from requirements gathering to delivery and support.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SKILLS -->
+<section id="skills">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-num">03</span>
+      <h2 class="section-title">Skills</h2>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="skills-layout">
+      <div class="reveal">
+        <div class="skills-group-title">Core Presales & Bid Skills</div>
+        <div class="skill-tags">
+          <span class="skill-tag skill-tag-primary">RFP / RFI / RFQ Responses</span>
+          <span class="skill-tag skill-tag-primary">Win Theme Development</span>
+          <span class="skill-tag skill-tag-primary">Executive Summaries</span>
+          <span class="skill-tag skill-tag-primary">Compliance Matrix</span>
+          <span class="skill-tag skill-tag-primary">Bid Governance</span>
+          <span class="skill-tag skill-tag-primary">Deal Desk</span>
+          <span class="skill-tag skill-tag-primary">Commercial Governance</span>
+          <span class="skill-tag skill-tag-primary">Service Design & Transition</span>
+          <span class="skill-tag skill-tag-primary">SOW Preparation</span>
+          <span class="skill-tag skill-tag-primary">Order Forms & Contracts</span>
+          <span class="skill-tag skill-tag-primary">Pricing Models</span>
+          <span class="skill-tag skill-tag-primary">Financial Modelling</span>
+          <span class="skill-tag skill-tag-primary">Competition Mapping</span>
+          <span class="skill-tag skill-tag-primary">Storyboarding</span>
+        </div>
+
+        <div style="margin-top:2.5rem">
+          <div class="skills-group-title">Pricing Model Types</div>
+          <div class="skill-tags">
+            <span class="skill-tag skill-tag-secondary">Subscription</span>
+            <span class="skill-tag skill-tag-secondary">Consumption-based</span>
+            <span class="skill-tag skill-tag-secondary">Tiered</span>
+            <span class="skill-tag skill-tag-secondary">Outcome-based</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal">
+        <div class="skills-group-title">Soft Skills & Processes</div>
+        <div class="skill-tags">
+          <span class="skill-tag skill-tag-secondary">Cross-functional Leadership</span>
+          <span class="skill-tag skill-tag-secondary">Customer Engagement</span>
+          <span class="skill-tag skill-tag-secondary">Executive Briefings</span>
+          <span class="skill-tag skill-tag-secondary">Whiteboarding</span>
+          <span class="skill-tag skill-tag-secondary">ITIL</span>
+          <span class="skill-tag skill-tag-secondary">Agile / Scrum</span>
+          <span class="skill-tag skill-tag-secondary">ISMS Knowledge</span>
+          <span class="skill-tag skill-tag-secondary">IT Product Lifecycle</span>
+          <span class="skill-tag skill-tag-secondary">Requirements Gathering</span>
+          <span class="skill-tag skill-tag-secondary">Risk Management</span>
+          <span class="skill-tag skill-tag-secondary">Operations Structuring</span>
+          <span class="skill-tag skill-tag-secondary">Change Management</span>
+          <span class="skill-tag skill-tag-secondary">Sales Strategy Alignment</span>
+        </div>
+
+        <div style="margin-top:2.5rem">
+          <div class="skills-group-title">Web Development (Prior)</div>
+          <div class="skill-tags">
+            <span class="skill-tag skill-tag-secondary">PHP</span>
+            <span class="skill-tag skill-tag-secondary">JavaScript</span>
+            <span class="skill-tag skill-tag-secondary">HTML5</span>
+            <span class="skill-tag skill-tag-secondary">CSS3</span>
+            <span class="skill-tag skill-tag-secondary">Video Production</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tech-areas reveal" style="margin-top:3.5rem">
+      <div class="tech-card">
+        <div class="tech-card-icon">🛡️</div>
+        <div class="tech-card-name">Cybersecurity</div>
+        <div class="tech-card-items">SIEM · SOAR · SOC · MDR · XDR<br>EDR · Zero Trust · Threat Intel<br>Network Security · Cloud Security</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-card-icon">🖥️</div>
+        <div class="tech-card-name">IT Managed Services</div>
+        <div class="tech-card-items">NOC · Data Center · Monitoring<br>Service Desk · Infra Ops<br>Remote Operations Centre</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-card-icon">☁️</div>
+        <div class="tech-card-name">Cloud & Modern Infra</div>
+        <div class="tech-card-items">Azure · AWS · Hybrid Cloud<br>Modern Networking · DC<br>Unified Communication · EUC</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-card-icon">⚙️</div>
+        <div class="tech-card-name">ITOM</div>
+        <div class="tech-card-items">Infrastructure Monitoring<br>Automation & Orchestration<br>Alert Management</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-card-icon">📊</div>
+        <div class="tech-card-name">Managed Security (MSS)</div>
+        <div class="tech-card-items">Security Monitoring<br>Threat Intelligence<br>Vulnerability Mgmt · Compliance</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-card-icon">🔄</div>
+        <div class="tech-card-name">NOC Transformation</div>
+        <div class="tech-card-items">Network · DC · Cloud Envs<br>Transition Planning<br>Executive Buy-in</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ACHIEVEMENTS -->
+<section id="achievements">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-num">04</span>
+      <h2 class="section-title">Key Achievements</h2>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="achievements-grid">
+      <div class="achievement-card reveal">
+        <div class="achievement-card-icon">🏆</div>
+        <div class="achievement-card-value">$15M</div>
+        <div class="achievement-card-label">TCV NOC Transformation Deal</div>
+        <div class="achievement-card-desc">Led the complete bid lifecycle for a $15M TCV deal, coordinating across sales, SMEs, and Delivery teams while securing executive buy-in.</div>
+      </div>
+      <div class="achievement-card reveal">
+        <div class="achievement-card-icon">⚡</div>
+        <div class="achievement-card-value">25%</div>
+        <div class="achievement-card-label">Reduction in Turnaround Time</div>
+        <div class="achievement-card-desc">Maintained a structured knowledge repository of past RFP responses, drastically cutting time-to-submit for new bids.</div>
+      </div>
+      <div class="achievement-card reveal">
+        <div class="achievement-card-icon">📉</div>
+        <div class="achievement-card-value">30%</div>
+        <div class="achievement-card-label">Fewer Last-Minute Escalations</div>
+        <div class="achievement-card-desc">Instituted formal bid governance processes that eliminated late-stage fire-drills and improved team predictability.</div>
+      </div>
+      <div class="achievement-card reveal">
+        <div class="achievement-card-icon">📈</div>
+        <div class="achievement-card-value">↑</div>
+        <div class="achievement-card-label">Improved Win Rate</div>
+        <div class="achievement-card-desc">Increased win rate via structured storyboarding, response templates, and customer-centric win themes aligned to business outcomes.</div>
+      </div>
+      <div class="achievement-card reveal">
+        <div class="achievement-card-icon">🌐</div>
+        <div class="achievement-card-value">7+</div>
+        <div class="achievement-card-label">Years of Presales Mastery</div>
+        <div class="achievement-card-desc">Consistently delivered under pressure across IT infrastructure, cybersecurity, and cloud managed services domains.</div>
+      </div>
+      <div class="achievement-card reveal">
+        <div class="achievement-card-icon">🤝</div>
+        <div class="achievement-card-value">✓</div>
+        <div class="achievement-card-label">Recognized for Collaboration</div>
+        <div class="achievement-card-desc">Formally recognized for cross-functional collaboration and adaptability across global sales and delivery organizations.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EDUCATION -->
+<section id="education">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-num">05</span>
+      <h2 class="section-title">Education & Certifications</h2>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="edu-cert-grid">
+      <div class="reveal">
+        <div class="skills-group-title" style="margin-bottom:2rem">Academic Qualifications</div>
+
+        <div class="edu-item">
+          <div class="edu-marker"></div>
+          <div>
+            <div class="edu-degree">B.E. — Electronics & Communications</div>
+            <div class="edu-institution">Osmania University, Hyderabad, Telangana</div>
+            <span class="edu-grade grade-first">First Class</span>
+          </div>
+        </div>
+
+        <div class="edu-item">
+          <div class="edu-marker"></div>
+          <div>
+            <div class="edu-degree">Intermediate — MPC</div>
+            <div class="edu-institution">Board of Intermediate Education, Andhra Pradesh</div>
+            <span class="edu-grade grade-distinction">Distinction</span>
+          </div>
+        </div>
+
+        <div class="edu-item">
+          <div class="edu-marker"></div>
+          <div>
+            <div class="edu-degree">SSC — Secondary School Certificate</div>
+            <div class="edu-institution">Secondary School Certificate Board</div>
+            <span class="edu-grade grade-distinction">Distinction</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal">
+        <div class="skills-group-title" style="margin-bottom:2rem">Professional Certification</div>
+        <div class="cert-card">
+          <div class="cert-badge-icon">🔐</div>
+          <div class="cert-org">ISC² — International</div>
+          <div class="cert-name">Certified in Cybersecurity (CC)</div>
+          <div class="cert-detail">
+            Credential ID: 6737529b-3ef6-4e7c-b368-bb404ed7e695<br><br>
+            Validates foundational knowledge of cybersecurity principles, network security, access controls, and security operations — aligned with globally recognized industry standards.
+          </div>
+          <span class="cert-valid">Valid through October 2028</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-num">06</span>
+      <h2 class="section-title">Let's Connect</h2>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="contact-wrapper">
+      <div class="reveal">
+        <p class="contact-intro">Ready to build<br><em>winning proposals</em><br>together?</p>
+        <p class="contact-sub">
+          Whether you're looking for an experienced Bid Manager, Presales professional, or someone to lead your next transformational deal — I'd love to connect and explore how we can create value together.
+        </p>
+        <a href="/cdn-cgi/l/email-protection#87f4e6f4e6e5e8e8f5b1b3c7e0eae6eeeba9e4e8ea" class="btn-primary" style="display:inline-block">Send a Message →</a>
+      </div>
+
+      <div class="contact-links reveal">
+        <a href="/cdn-cgi/l/email-protection#3d4e5c4e5c5f52524f0b097d5a505c5451135e5250" class="contact-link">
+          <div class="contact-link-icon">✉️</div>
+          <div class="contact-link-info">
+            <div class="contact-link-label">Email</div>
+            <div class="contact-link-value"><span class="__cf_email__" data-cfemail="295a485a484b46465b1f1d694e44484045074a4644">[email&#160;protected]</span></div>
+          </div>
+          <div class="contact-link-arrow">→</div>
+        </a>
+
+        <a href="tel:+917013442701" class="contact-link">
+          <div class="contact-link-icon">📱</div>
+          <div class="contact-link-info">
+            <div class="contact-link-label">Phone</div>
+            <div class="contact-link-value">+91 70134 42701</div>
+          </div>
+          <div class="contact-link-arrow">→</div>
+        </a>
+
+        <a href="https://www.linkedin.com/in/abdus-saboor-asad?utm_source=share_via&utm_content=profile&utm_medium=member_android" target="_blank" class="contact-link">
+          <div class="contact-link-icon">💼</div>
+          <div class="contact-link-info">
+            <div class="contact-link-label">LinkedIn</div>
+            <div class="contact-link-value">Connect on LinkedIn</div>
+          </div>
+          <div class="contact-link-arrow">→</div>
+        </a>
+
+        <div class="contact-link" style="cursor:default">
+          <div class="contact-link-icon">📍</div>
+          <div class="contact-link-info">
+            <div class="contact-link-label">Location</div>
+            <div class="contact-link-value">Hyderabad, India</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-strip container">
+      <span>Abdus Saboor Asad — Bid Manager & Presales Professional</span>
+      <span>ISC² Certified in Cybersecurity · Hyderabad, India</span>
+    </div>
+  </div>
+</section>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  // Hamburger
+  function toggleNav() {
+    document.getElementById('navLinks').classList.toggle('open');
+  }
+
+  // Close nav on link click
+  document.querySelectorAll('.nav-links a').forEach(link => {
+    link.addEventListener('click', () => {
+      document.getElementById('navLinks').classList.remove('open');
+    });
+  });
+
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 60);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08 });
+
+  reveals.forEach(el => observer.observe(el
