@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abdul Baseer Anwar — Quran, Arabic &amp; Islamic Studies Tutor</title>
+<meta name="description" content="Abdul Baseer Anwar — Alim from Darul Uloom Hyderabad and Hafiz-e-Quran. One-to-one classes in Quran, Tajweed, Hifz, Arabic, Tafsir, Hadith and Fiqh.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;700&family=Noto+Naskh+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #0f3d2e;
+  --green-2: #164f3c;
+  --gold: #b8893b;
+  --gold-soft: #e6cf9f;
+  --cream: #f8f3e9;
+  --paper: #fffdf8;
+  --ink: #1f2a24;
+  --muted: #5d6b63;
+  --line: #e4dccb;
+  --radius: 14px;
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'DM Sans', system-ui, sans-serif;
+  --arabic: 'Amiri', 'Noto Naskh Arabic', serif;
+  --arabic-body: 'Noto Naskh Arabic', 'Amiri', serif;
+  --pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23b8893b' stroke-opacity='.22' stroke-width='1'%3E%3Crect x='20' y='20' width='40' height='40'/%3E%3Crect x='20' y='20' width='40' height='40' transform='rotate(45 40 40)'/%3E%3Ccircle cx='40' cy='40' r='9'/%3E%3Cpath d='M0 0L20 20M80 0L60 20M0 80L20 60M80 80L60 60'/%3E%3C/g%3E%3C/svg%3E");
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+body { font-family: var(--sans); color: var(--ink); background: var(--cream); line-height: 1.65; -webkit-font-smoothing: antialiased; }
+html[lang="ar"] body { font-family: var(--arabic-body); line-height: 1.9; }
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+.wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
+.ar-text { font-family: var(--arabic); }
+
+/* Nav */
+.nav { position: sticky; top: 0; z-index: 50; background: rgba(15,61,46,.97); backdrop-filter: blur(6px); color: var(--cream); }
+.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-family: var(--serif); font-size: 1.3rem; font-weight: 700; letter-spacing: .3px; white-space: nowrap; }
+html[lang="ar"] .brand { font-family: var(--arabic); font-size: 1.35rem; }
+.brand-mark { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--gold); display: grid; place-items: center; font-family: var(--arabic); color: var(--gold-soft); font-size: 1.05rem; padding-bottom: 4px; }
+.nav-links { display: flex; gap: 22px; list-style: none; }
+.nav-links a { text-decoration: none; font-size: .93rem; opacity: .85; transition: opacity .2s, color .2s; }
+.nav-links a:hover { opacity: 1; color: var(--gold-soft); }
+.nav-right { display: flex; align-items: center; gap: 10px; }
+.lang-toggle { display: inline-flex; border: 1px solid rgba(230,207,159,.6); border-radius: 999px; overflow: hidden; background: transparent; cursor: pointer; padding: 0; font: inherit; }
+.lang-toggle span { padding: 6px 12px; font-size: .85rem; color: var(--cream); transition: background .2s, color .2s; }
+.lang-toggle span:last-child { font-family: var(--arabic); font-size: .95rem; padding-top: 4px; padding-bottom: 8px; }
+html[lang="en"] .lang-toggle span:first-child,
+html[lang="ar"] .lang-toggle span:last-child { background: var(--gold); color: var(--green); font-weight: 700; }
+.menu-btn { display: none; background: none; border: 0; color: var(--cream); font-size: 1.5rem; cursor: pointer; width: 40px; height: 40px; }
+
+/* Hero */
+.hero { background: var(--green) var(--pattern); color: var(--cream); padding: 72px 0 88px; position: relative; overflow: hidden; }
+.hero::after { content: ""; position: absolute; inset: auto 0 0 0; height: 6px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+.hero .wrap { display: grid; grid-template-columns: 1.15fr .85fr; gap: 56px; align-items: center; }
+.bismillah { font-family: var(--arabic); font-size: 1.7rem; color: var(--gold-soft); margin-bottom: 18px; direction: rtl; }
+.eyebrow { display: inline-block; font-size: .8rem; letter-spacing: 1.6px; text-transform: uppercase; color: var(--gold-soft); border: 1px solid rgba(230,207,159,.45); padding: 6px 14px; border-radius: 999px; margin-bottom: 20px; }
+html[lang="ar"] .eyebrow { letter-spacing: 0; text-transform: none; font-size: .95rem; }
+.hero h1 { font-family: var(--serif); font-size: clamp(2.6rem, 6vw, 4.2rem); line-height: 1.05; font-weight: 700; margin-bottom: 8px; }
+html[lang="ar"] .hero h1 { font-family: var(--arabic); line-height: 1.4; }
+.hero .name-alt { font-family: var(--arabic); font-size: 1.6rem; color: var(--gold-soft); margin-bottom: 22px; }
+html[lang="ar"] .hero .name-alt { font-family: var(--serif); font-size: 1.5rem; }
+.hero .lead { font-size: 1.15rem; max-width: 560px; opacity: .92; margin-bottom: 30px; }
+.hero .lead strong { color: var(--gold-soft); font-weight: 500; }
+.btns { display: flex; flex-wrap: wrap; gap: 12px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 999px; font-weight: 700; font-size: .98rem; text-decoration: none; border: 2px solid transparent; cursor: pointer; font-family: inherit; transition: transform .15s, background .2s, color .2s; }
+.btn:hover { transform: translateY(-2px); }
+.btn-gold { background: var(--gold); color: var(--green); }
+.btn-gold:hover { background: var(--gold-soft); }
+.btn-ghost { border-color: rgba(248,243,233,.55); color: var(--cream); }
+.btn-ghost:hover { background: rgba(248,243,233,.1); }
+.btn svg { width: 18px; height: 18px; flex: none; }
+
+.portrait { position: relative; justify-self: center; width: min(380px, 100%); }
+.portrait .frame { border-radius: 200px 200px var(--radius) var(--radius); overflow: hidden; border: 3px solid var(--gold); box-shadow: 0 30px 60px rgba(0,0,0,.35); aspect-ratio: 4 / 5; background: var(--green-2); }
+.portrait img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
+.portrait .badge { position: absolute; bottom: -20px; inset-inline-start: -20px; background: var(--paper); color: var(--green); border-radius: var(--radius); padding: 12px 18px; box-shadow: 0 12px 30px rgba(0,0,0,.25); text-align: center; }
+.portrait .badge b { display: block; font-family: var(--arabic); font-size: 1.4rem; line-height: 1.4; color: var(--gold); }
+.portrait .badge small { font-size: .78rem; font-weight: 700; letter-spacing: .4px; }
+
+/* Credentials strip */
+.creds { background: var(--paper); border-bottom: 1px solid var(--line); }
+.creds .wrap { display: grid; grid-template-columns: repeat(4, 1fr); }
+.cred { padding: 26px 18px; text-align: center; border-inline-end: 1px solid var(--line); }
+.cred:last-child { border-inline-end: 0; }
+.cred .ar-text { font-size: 1.45rem; color: var(--gold); line-height: 1.5; }
+.cred p { font-weight: 700; color: var(--green); font-size: .95rem; }
+.cred small { color: var(--muted); font-size: .82rem; }
+
+/* Sections */
+section { padding: 88px 0; }
+.sec-head { text-align: center; max-width: 680px; margin: 0 auto 48px; }
+.sec-head .ar-text { color: var(--gold); font-size: 1.5rem; display: block; margin-bottom: 4px; }
+.sec-head h2 { font-family: var(--serif); font-size: clamp(2rem, 4vw, 2.8rem); color: var(--green); line-height: 1.15; margin-bottom: 12px; }
+html[lang="ar"] .sec-head h2 { font-family: var(--arabic); line-height: 1.5; }
+.sec-head p { color: var(--muted); }
+.divider { width: 70px; height: 2px; background: var(--gold); margin: 14px auto 0; position: relative; }
+.divider::after { content: ""; position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; background: var(--gold); transform: translate(-50%,-50%) rotate(45deg); }
+
+/* About */
+.about .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: start; }
+.about-text p { margin-bottom: 16px; font-size: 1.05rem; }
+.about-text p:first-child::first-line { font-weight: 700; color: var(--green); }
+.syllabus { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; }
+.syllabus h3 { font-family: var(--serif); color: var(--green); font-size: 1.5rem; margin-bottom: 16px; }
+html[lang="ar"] .syllabus h3 { font-family: var(--arabic); }
+.syllabus ul { list-style: none; display: grid; gap: 10px; }
+.syllabus li { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: baseline; padding-bottom: 10px; border-bottom: 1px dashed var(--line); font-size: .97rem; }
+.syllabus li:last-child { border-bottom: 0; padding-bottom: 0; }
+.syllabus li .ar-text { color: var(--gold); font-size: 1.2rem; }
+html[lang="ar"] .syllabus li .ar-text { display: none; }
+
+/* Quote */
+.quote { background: var(--green) var(--pattern); color: var(--cream); text-align: center; padding: 72px 0; }
+.quote .ar-text { font-size: clamp(1.8rem, 4.5vw, 2.8rem); color: var(--gold-soft); line-height: 1.8; direction: rtl; }
+.quote p { font-family: var(--serif); font-size: 1.35rem; font-style: italic; margin-top: 8px; opacity: .92; }
+html[lang="ar"] .quote p { font-family: var(--arabic-body); font-style: normal; font-size: 1.1rem; }
+.quote cite { display: block; margin-top: 10px; font-style: normal; font-size: .85rem; letter-spacing: 1px; color: var(--gold-soft); }
+
+/* Courses */
+.courses { background: var(--paper); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+.card { background: var(--cream); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px 24px; display: flex; flex-direction: column; transition: transform .2s, box-shadow .2s, border-color .2s; }
+.card:hover { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(15,61,46,.12); border-color: var(--gold-soft); }
+.card .icon { width: 50px; height: 50px; border-radius: 12px; background: var(--green); color: var(--gold-soft); display: grid; place-items: center; font-family: var(--arabic); font-size: 1.5rem; margin-bottom: 16px; padding-bottom: 6px; }
+.card h3 { font-family: var(--serif); font-size: 1.4rem; color: var(--green); line-height: 1.2; margin-bottom: 4px; }
+html[lang="ar"] .card h3 { font-family: var(--arabic); line-height: 1.6; }
+.card .sub { font-family: var(--arabic); color: var(--gold); font-size: 1.05rem; margin-bottom: 10px; }
+html[lang="ar"] .card .sub { display: none; }
+.card p { color: var(--muted); font-size: .95rem; flex: 1; }
+.tag { align-self: flex-start; margin-top: 16px; font-size: .78rem; font-weight: 700; color: var(--green); background: rgba(184,137,59,.15); padding: 4px 12px; border-radius: 999px; }
+
+/* Steps */
+.steps { counter-reset: s; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.step { position: relative; padding: 28px 22px; background: var(--paper); border-radius: var(--radius); border-top: 3px solid var(--gold); }
+.step::before { counter-increment: s; content: counter(s, arabic-indic); font-family: var(--arabic); font-size: 2.2rem; color: var(--gold); line-height: 1; display: block; margin-bottom: 12px; }
+.step h3 { font-size: 1.08rem; color: var(--green); margin-bottom: 6px; }
+.step p { color: var(--muted); font-size: .93rem; }
+
+.who { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 56px; }
+.who div { text-align: center; padding: 22px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--cream); }
+.who b { display: block; color: var(--green); margin-bottom: 4px; }
+.who span { color: var(--muted); font-size: .88rem; }
+
+/* FAQ */
+.faq { background: var(--paper); }
+.faq-list { max-width: 780px; margin-inline: auto; display: grid; gap: 12px; }
+details { background: var(--cream); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 22px; }
+summary { cursor: pointer; font-weight: 700; color: var(--green); list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; color: var(--gold); font-size: 1.4rem; line-height: 1; transition: transform .2s; }
+details[open] summary::after { transform: rotate(45deg); }
+details p { margin-top: 10px; color: var(--muted); }
+
+/* Contact */
+.contact .wrap { display: grid; grid-template-columns: .9fr 1.1fr; gap: 48px; align-items: start; }
+.contact-info h2 { font-family: var(--serif); font-size: clamp(2rem, 4vw, 2.6rem); color: var(--green); line-height: 1.15; margin-bottom: 12px; }
+html[lang="ar"] .contact-info h2 { font-family: var(--arabic); line-height: 1.5; }
+.contact-info > p { color: var(--muted); margin-bottom: 24px; }
+.contact-list { list-style: none; display: grid; gap: 14px; }
+.contact-list a { display: flex; align-items: center; gap: 14px; text-decoration: none; padding: 14px 18px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); transition: border-color .2s; }
+.contact-list a:hover { border-color: var(--gold); }
+.contact-list .ic { width: 40px; height: 40px; border-radius: 10px; background: var(--green); color: var(--gold-soft); display: grid; place-items: center; flex: none; }
+.contact-list .ic svg { width: 20px; height: 20px; }
+.contact-list small { display: block; color: var(--muted); font-size: .8rem; }
+.contact-list b { color: var(--green); direction: ltr; unicode-bidi: isolate; }
+
+form { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; display: grid; gap: 16px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+label { display: grid; gap: 6px; font-size: .88rem; font-weight: 700; color: var(--green); }
+input, select, textarea { font: inherit; font-weight: 400; font-size: .97rem; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--cream); color: var(--ink); width: 100%; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--gold-soft); border-color: var(--gold); }
+textarea { min-height: 110px; resize: vertical; }
+form .btn { justify-content: center; }
+.form-note { font-size: .82rem; color: var(--muted); text-align: center; }
+
+footer { background: var(--green); color: rgba(248,243,233,.8); padding: 36px 0; text-align: center; font-size: .9rem; }
+footer .ar-text { color: var(--gold-soft); font-size: 1.4rem; display: block; margin-bottom: 8px; }
+
+.wa-float { position: fixed; bottom: 20px; inset-inline-end: 20px; width: 56px; height: 56px; border-radius: 50%; background: #25d366; color: #fff; display: grid; place-items: center; box-shadow: 0 8px 24px rgba(0,0,0,.25); z-index: 40; transition: transform .2s; }
+.wa-float:hover { transform: scale(1.08); }
+.wa-float svg { width: 28px; height: 28px; }
+
+/* Responsive */
+@media (max-width: 960px) {
+  .hero .wrap, .about .wrap, .contact .wrap { grid-template-columns: 1fr; }
+  .hero .wrap { gap: 48px; }
+  .portrait { order: -1; width: min(300px, 80%); }
+  .hero-copy { text-align: center; }
+  .hero .lead { margin-inline: auto; }
+  .btns { justify-content: center; }
+  .steps, .who { grid-template-columns: repeat(2, 1fr); }
+  .creds .wrap { grid-template-columns: repeat(2, 1fr); }
+  .cred:nth-child(2) { border-inline-end: 0; }
+  .cred:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+}
+@media (max-width: 760px) {
+  .menu-btn { display: block; }
+  .nav-links { position: absolute; top: 64px; left: 0; right: 0; flex-direction: column; gap: 0; background: var(--green); padding: 8px 16px 16px; display: none; }
+  .nav-links.open { display: flex; }
+  .nav-links a { display: block; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+  .brand-name { font-size: 1.1rem; }
+}
+@media (max-width: 560px) {
+  section { padding: 64px 0; }
+  .hero { padding: 48px 0 64px; }
+  .steps, .who, .row2 { grid-template-columns: 1fr; }
+  .portrait .badge { inset-inline-start: -8px; }
+  .brand-name { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+
+<!--
+  TRANSLATION: every element with a data-ar attribute holds its Arabic text there;
+  the English is the element's normal content. The toggle swaps between them.
+  TODO: replace the placeholder WhatsApp number and email in the CONFIG block at the bottom.
+-->
+
+<nav class="nav">
+  <div class="wrap">
+    <a href="#top" class="brand">
+      <span class="brand-mark">ع</span>
+      <span class="brand-name" data-ar="عبد البصير أنور">Abdul Baseer Anwar</span>
+    </a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#about" data-ar="نبذة">About</a></li>
+      <li><a href="#courses" data-ar="الدورات">Courses</a></li>
+      <li><a href="#approach" data-ar="طريقة التعلّم">How it works</a></li>
+      <li><a href="#faq" data-ar="أسئلة شائعة">FAQ</a></li>
+      <li><a href="#contact" data-ar="تواصل">Contact</a></li>
+    </ul>
+    <div class="nav-right">
+      <button class="lang-toggle" id="langToggle" type="button" aria-label="Switch language / تغيير اللغة">
+        <span>EN</span><span>عربي</span>
+      </button>
+      <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="hero-copy">
+      <div class="bismillah">بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>
+      <span class="eyebrow" data-ar="عالم · حافظ للقرآن الكريم · دار العلوم حيدرآباد">Alim · Hafiz-e-Quran · Darul Uloom Hyderabad</span>
+      <h1 data-ar="عبد البصير أنور">Abdul Baseer Anwar</h1>
+      <div class="name-alt" data-ar="Abdul Baseer Anwar">عبد البصير أنور</div>
+      <p class="lead" data-ar="تعلّم <strong>القرآن الكريم واللغة العربية والعلوم الشرعية</strong> على المنهج الأصيل — دروس فردية للأطفال والكبار، مستمدّة من الدرس النظامي في دار العلوم، تُقدَّم بصبر وعناية.">
+        Learn <strong>the Quran, Arabic and the Islamic sciences</strong> the traditional way — one-to-one classes for children and adults, rooted in the Dars-e-Nizami of Darul Uloom and taught with patience and care.
+      </p>
+      <div class="btns">
+        <a href="#contact" class="btn btn-gold" data-ar="احجز حصة تجريبية مجانية">Book a free trial class</a>
+        <a href="#" class="btn btn-ghost js-wa" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.4.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.5-.3z"/></svg>
+          <span data-ar="واتساب">WhatsApp</span>
+        </a>
+      </div>
+    </div>
+    <div class="portrait">
+      <div class="frame">
+        <img src="assets/abdul-baseer-anwar.jpg" alt="Abdul Baseer Anwar" data-ar-alt="عبد البصير أنور" width="900" height="1109">
+      </div>
+      <div class="badge">
+        <b>حافظ · عالم</b>
+        <small data-ar="دار العلوم حيدرآباد">Darul Uloom Hyderabad</small>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="creds">
+  <div class="wrap">
+    <div class="cred"><div class="ar-text">حافظ</div><p data-ar="حافظ للقرآن الكريم">Hafiz-e-Quran</p><small data-ar="حفظ القرآن كاملاً">Memorised the entire Quran</small></div>
+    <div class="cred"><div class="ar-text">عالم</div><p data-ar="خرّيج الدرس النظامي">Alim — Dars-e-Nizami</p><small data-ar="دار العلوم حيدرآباد">Darul Uloom Hyderabad</small></div>
+    <div class="cred"><div class="ar-text">فقه</div><p data-ar="الفقه الحنفي">Hanafi Fiqh</p><small data-ar="على منهج علماء ديوبند">In the Deobandi tradition</small></div>
+    <div class="cred"><div class="ar-text">فردي</div><p data-ar="دروس فردية">One-to-one classes</p><small data-ar="للأطفال والكبار">For children &amp; adults</small></div>
+  </div>
+</div>
+
+<section class="about" id="about">
+  <div class="wrap">
+    <div>
+      <div class="sec-head" style="text-align:start;margin:0 0 28px">
+        <span class="ar-text">نبذة عنّي</span>
+        <h2 data-ar="معلّم من أهل القرآن">A teacher from the people of the Quran</h2>
+      </div>
+      <div class="about-text">
+        <p data-ar="السلام عليكم ورحمة الله وبركاته.">Assalamu alaikum wa rahmatullah.</p>
+        <p data-ar="أنا عبد البصير أنور، عالم متخرّج في دار العلوم حيدرآباد وحافظ للقرآن الكريم. درستُ منهج الدرس النظامي كاملاً: النحو والصرف، والبلاغة والأدب، والتفسير، والحديث، والفقه وأصوله.">I am Abdul Baseer Anwar, an Alim graduate of Darul Uloom Hyderabad and a Hafiz of the Noble Quran. My studies covered the full Dars-e-Nizami curriculum — Arabic grammar and morphology, rhetoric and literature, Tafsir, Hadith, and Fiqh with its principles.</p>
+        <p data-ar="أُدرّس الطلاب من جميع الأعمار والمستويات، من الطفل الذي يتعلّم أول الحروف إلى الكبار الذين يدرسون الكتب التراثية.">I teach students of every age and level — from a child reading their very first letters to adults studying the classical texts.</p>
+        <p data-ar="غايتي بسيطة: أن يقرأ كل طالب كتاب الله قراءة صحيحة، ويفهم لغته، ويعمل بما يتعلّم.">My aim is simple: that every student reads the Book of Allah correctly, understands its language, and lives by what they learn.</p>
+      </div>
+    </div>
+    <div class="syllabus">
+      <h3 data-ar="ما درستُه في دار العلوم">What I studied at Darul Uloom</h3>
+      <ul>
+        <li><span data-ar="القرآن الكريم: الحفظ والتجويد">Quran — Hifz &amp; Tajweed</span><span class="ar-text">القرآن والتجويد</span></li>
+        <li><span data-ar="النحو والصرف">Arabic grammar &amp; morphology</span><span class="ar-text">النحو والصرف</span></li>
+        <li><span data-ar="البلاغة والأدب العربي">Rhetoric &amp; Arabic literature</span><span class="ar-text">البلاغة والأدب</span></li>
+        <li><span data-ar="التفسير وأصوله">Tafsir &amp; its principles</span><span class="ar-text">التفسير وأصوله</span></li>
+        <li><span data-ar="الحديث الشريف ومصطلحه">Hadith &amp; its sciences</span><span class="ar-text">الحديث ومصطلحه</span></li>
+        <li><span data-ar="الفقه الحنفي وأصوله">Hanafi Fiqh &amp; Usul al-Fiqh</span><span class="ar-text">الفقه وأصوله</span></li>
+        <li><span data-ar="العقيدة والسيرة النبوية">Aqidah &amp; Seerah</span><span class="ar-text">العقيدة والسيرة</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="quote">
+  <div class="wrap">
+    <div class="ar-text">خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ</div>
+    <p data-ar="«خيركم من تعلّم القرآن وعلّمه»">“The best of you are those who learn the Quran and teach it.”</p>
+    <cite data-ar="صحيح البخاري">— Sahih al-Bukhari</cite>
+  </div>
+</div>
+
+<section class="courses" id="courses">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="ar-text">الدورات</span>
+      <h2 data-ar="ماذا تريد أن تتعلّم؟">What would you like to learn?</h2>
+      <p data-ar="كل دورة تُصمَّم حسب مستوى الطالب وعمره وأهدافه.">Every course is shaped around the student's level, age and goals.</p>
+      <div class="divider"></div>
+    </div>
+    <div class="grid">
+      <article class="card">
+        <div class="icon">أ</div>
+        <h3 data-ar="القاعدة النورانية">Noorani Qaida</h3>
+        <div class="sub">القاعدة النورانية</div>
+        <p data-ar="ابدأ قراءة القرآن من الحرف الأول: الحروف الهجائية، ووصل الحروف، والحركات، والقواعد الأساسية.">Start reading the Quran from the very first letter — the alphabet, joining letters, harakat and the basic rules.</p>
+        <span class="tag" data-ar="للمبتدئين · أطفال وكبار">Beginners · Kids &amp; adults</span>
+      </article>
+      <article class="card">
+        <div class="icon">ق</div>
+        <h3 data-ar="التلاوة بالتجويد">Quran with Tajweed</h3>
+        <div class="sub">التلاوة بالتجويد</div>
+        <p data-ar="تلاوة صحيحة متقنة: مخارج الحروف وصفاتها، وأحكام النون والميم، والمدود، والوقف والابتداء.">Recite correctly — makharij and sifaat of letters, rules of noon and meem, madd, and stopping and starting.</p>
+        <span class="tag" data-ar="جميع المستويات">All levels</span>
+      </article>
+      <article class="card">
+        <div class="icon">ح</div>
+        <h3 data-ar="حفظ القرآن الكريم">Hifz-ul-Quran</h3>
+        <div class="sub">حفظ القرآن الكريم</div>
+        <p data-ar="حفظ منظّم بالدرس اليومي والمراجعة القريبة والبعيدة (سبق، سبقي، منزل)، بإشراف حافظ للقرآن.">Structured memorisation with daily sabaq, sabqi and manzil revision — guided by a Hafiz who has walked the same path.</p>
+        <span class="tag" data-ar="أطفال وكبار">Kids &amp; adults</span>
+      </article>
+      <article class="card">
+        <div class="icon">ع</div>
+        <h3 data-ar="عربية القرآن">Quranic Arabic</h3>
+        <div class="sub">عربية القرآن</div>
+        <p data-ar="افهم القرآن بلغته من خلال النحو والصرف والمفردات القرآنية الأكثر تكراراً.">Understand the Quran in its own language through Nahw, Sarf and the most frequent Quranic vocabulary.</p>
+        <span class="tag" data-ar="مبتدئ – متوسط">Beginner – Intermediate</span>
+      </article>
+      <article class="card">
+        <div class="icon">ن</div>
+        <h3 data-ar="العربية الفصحى وكتب الدرس النظامي">Classical Arabic (Dars-e-Nizami)</h3>
+        <div class="sub">النحو والصرف والبلاغة</div>
+        <p data-ar="دراسة الكتب المقررة كـ«نحو مير» و«هداية النحو» و«علم الصيغة»، مع الأدب والبلاغة.">Study the classical texts — Nahw Mir, Hidayat-un-Nahw, Ilm-us-Seegha — along with literature and rhetoric.</p>
+        <span class="tag" data-ar="متقدّم">Advanced</span>
+      </article>
+      <article class="card">
+        <div class="icon">ت</div>
+        <h3 data-ar="التفسير والحديث">Tafsir &amp; Hadith</h3>
+        <div class="sub">التفسير والحديث</div>
+        <p data-ar="معاني القرآن وتفسيره، ودراسة الحديث الشريف وأصوله، من «رياض الصالحين» إلى «مشكاة المصابيح».">Meaning and commentary of the Quran, and the study of Hadith with its principles — from Riyad-us-Saliheen to Mishkat.</p>
+        <span class="tag" data-ar="متوسط – متقدّم">Intermediate – Advanced</span>
+      </article>
+      <article class="card">
+        <div class="icon">ف</div>
+        <h3 data-ar="الفقه والدراسات الإسلامية">Fiqh &amp; Islamic Studies</h3>
+        <div class="sub">الفقه والعقيدة والسيرة</div>
+        <p data-ar="الفقه الحنفي في الحياة اليومية: الطهارة والصلاة والصيام والزكاة وغيرها، مع العقيدة والسيرة النبوية.">Hanafi fiqh for daily life — taharah, salah, fasting, zakat and more — together with Aqidah and Seerah.</p>
+        <span class="tag" data-ar="جميع المستويات">All levels</span>
+      </article>
+      <article class="card">
+        <div class="icon">ط</div>
+        <h3 data-ar="التربية الإسلامية للأطفال">Islamic Studies for Kids</h3>
+        <div class="sub">التربية الإسلامية</div>
+        <p data-ar="الأدعية، وقصار السور، وسيرة النبي ﷺ، والآداب، والصلاة — بأسلوب لطيف وممتع.">Duas, short surahs, the life of the Prophet ﷺ, manners and salah — taught gently and engagingly.</p>
+        <span class="tag" data-ar="الأطفال">Children</span>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="approach">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="ar-text">طريقة التعلّم</span>
+      <h2 data-ar="كيف نبدأ؟">How it works</h2>
+      <div class="divider"></div>
+    </div>
+    <div class="steps">
+      <div class="step"><h3 data-ar="تواصل معنا">Get in touch</h3><p data-ar="راسلنا عبر واتساب أو املأ النموذج أدناه.">Message on WhatsApp or fill in the form below.</p></div>
+      <div class="step"><h3 data-ar="حصة تجريبية وتقييم">Free trial &amp; assessment</h3><p data-ar="حصة مجانية لمعرفة مستواك وأهدافك.">A free class to understand your level and your goals.</p></div>
+      <div class="step"><h3 data-ar="خطة شخصية">A personal plan</h3><p data-ar="خطة دراسية ومواعيد تناسبك.">A study plan and timetable that fits you.</p></div>
+      <div class="step"><h3 data-ar="التعلّم والتقدّم">Learn &amp; progress</h3><p data-ar="دروس منتظمة مع مراجعة وتقارير دورية لأولياء الأمور.">Regular classes with revision, and progress updates for parents.</p></div>
+    </div>
+    <div class="who">
+      <div><b data-ar="الأطفال">Children</b><span data-ar="القاعدة والتلاوة والحفظ">Qaida, recitation &amp; Hifz</span></div>
+      <div><b data-ar="الكبار">Adults</b><span data-ar="لم يفت الأوان أبداً">It is never too late to begin</span></div>
+      <div><b data-ar="المسلمون الجدد">New Muslims</b><span data-ar="الأساسيات خطوة بخطوة">The basics, step by step</span></div>
+      <div><b data-ar="طلبة العلم">Students of knowledge</b><span data-ar="الكتب التراثية">Classical texts</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="faq" id="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="ar-text">أسئلة شائعة</span>
+      <h2 data-ar="أسئلة شائعة">Frequently asked questions</h2>
+      <div class="divider"></div>
+    </div>
+    <div class="faq-list">
+      <details>
+        <summary data-ar="هل الدروس عبر الإنترنت؟">Are the classes online?</summary>
+        <p data-ar="نعم، تُقدَّم الدروس عبر الإنترنت (زوم أو جوجل ميت أو مكالمة فيديو على واتساب)، فيمكنك التعلّم من أي مكان في العالم.">Yes — classes are held online (Zoom, Google Meet or WhatsApp video), so you can learn from anywhere in the world.</p>
+      </details>
+      <details>
+        <summary data-ar="بأي لغة يتم التدريس؟">Which language are classes taught in?</summary>
+        <p data-ar="الأردية والهندية والإنجليزية، والعربية للطلاب المتقدّمين.">Urdu, Hindi and English — and Arabic for advanced students.</p>
+      </details>
+      <details>
+        <summary data-ar="هل الحصة الأولى مجانية؟">Is the first class free?</summary>
+        <p data-ar="نعم، الحصة التجريبية الأولى مجانية لتقييم المستوى والتعارف.">Yes. The first trial class is free, so we can assess your level and get to know each other.</p>
+      </details>
+      <details>
+        <summary data-ar="كم الرسوم؟">What are the fees?</summary>
+        <p data-ar="تختلف الرسوم حسب الدورة وعدد الحصص في الأسبوع. تواصل معنا لمعرفة التفاصيل.">Fees depend on the course and the number of classes per week. Please get in touch for details.</p>
+      </details>
+      <details>
+        <summary data-ar="هل يمكنني اختيار المواعيد؟">Can I choose my class timings?</summary>
+        <p data-ar="نعم، نحدّد المواعيد معاً بما يناسب منطقتك الزمنية، سواء في الهند أو الخليج أو بريطانيا أو أمريكا.">Yes. We agree on timings that suit your time zone — India, the Gulf, the UK or North America.</p>
+      </details>
+      <details>
+        <summary data-ar="على أي مذهب يُدرَّس الفقه؟">Which madhhab is Fiqh taught according to?</summary>
+        <p data-ar="يُدرَّس الفقه على المذهب الحنفي، كما هو منهج دار العلوم.">Fiqh is taught according to the Hanafi madhhab, following the Darul Uloom tradition.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="contact" id="contact">
+  <div class="wrap">
+    <div class="contact-info">
+      <span class="ar-text" style="color:var(--gold);font-size:1.5rem">تواصل معنا</span>
+      <h2 data-ar="احجز حصّتك التجريبية المجانية">Book your free trial class</h2>
+      <p data-ar="أرسل رسالة وسنتواصل معك في أقرب وقت إن شاء الله.">Send a message and you'll hear back soon, in sha Allah.</p>
+      <ul class="contact-list">
+        <li><a href="#" class="js-wa" target="_blank" rel="noopener">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg></span>
+          <span><small data-ar="واتساب">WhatsApp</small><b class="js-phone"></b></span>
+        </a></li>
+        <li><a href="#" class="js-mail">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+          <span><small data-ar="البريد الإلكتروني">Email</small><b class="js-email"></b></span>
+        </a></li>
+      </ul>
+    </div>
+
+    <form id="enquiry">
+      <div class="row2">
+        <label><span data-ar="الاسم">Your name</span>
+          <input name="name" required data-ar-placeholder="اسمك" placeholder="Your name">
+        </label>
+        <label><span data-ar="الطالب">Student</span>
+          <select name="who">
+            <option value="Child" data-ar="طفل">Child</option>
+            <option value="Adult" data-ar="بالغ">Adult</option>
+          </select>
+        </label>
+      </div>
+      <label><span data-ar="الدورة">Course</span>
+        <select name="course">
+          <option data-ar="القاعدة النورانية" value="Noorani Qaida">Noorani Qaida</option>
+          <option data-ar="التلاوة بالتجويد" value="Quran with Tajweed">Quran with Tajweed</option>
+          <option data-ar="حفظ القرآن الكريم" value="Hifz">Hifz-ul-Quran</option>
+          <option data-ar="عربية القرآن" value="Quranic Arabic">Quranic Arabic</option>
+          <option data-ar="العربية الفصحى" value="Classical Arabic">Classical Arabic (Dars-e-Nizami)</option>
+          <option data-ar="التفسير والحديث" value="Tafsir & Hadith">Tafsir &amp; Hadith</option>
+          <option data-ar="الفقه والدراسات الإسلامية" value="Fiqh & Islamic Studies">Fiqh &amp; Islamic Studies</option>
+          <option data-ar="التربية الإسلامية للأطفال" value="Islamic Studies for Kids">Islamic Studies for Kids</option>
+          <option data-ar="غير متأكد" value="Not sure yet">Not sure yet</option>
+        </select>
+      </label>
+      <label><span data-ar="رسالتك (اختياري)">Message (optional)</span>
+        <textarea name="msg" data-ar-placeholder="المستوى الحالي، المواعيد المناسبة، المنطقة الزمنية…" placeholder="Current level, preferred timings, time zone…"></textarea>
+      </label>
+      <button type="submit" class="btn btn-gold" data-ar="أرسل عبر واتساب">Send via WhatsApp</button>
+      <p class="form-note" data-ar="سيفتح واتساب برسالتك جاهزة للإرسال.">This opens WhatsApp with your message ready to send.</p>
+    </form>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span class="ar-text">اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ</span>
+    <p>© <span id="year">2026</span> <span data-ar="عبد البصير أنور · عالم وحافظ · دار العلوم حيدرآباد">Abdul Baseer Anwar · Alim &amp; Hafiz · Darul Uloom Hyderabad</span></p>
+  </div>
+</footer>
+
+<a href="#" class="wa-float js-wa" target="_blank" rel="noopener" aria-label="WhatsApp">
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.4.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.5-.3z"/></svg>
+</a>
+
+<script>
+/* ===== CONFIG — TODO: replace with real contact details ===== */
+const CONFIG = {
+  whatsapp: '910000000000',          // country code + number, digits only
+  phoneDisplay: '+91 00000 00000',
+  email: 'contact@example.com'
+};
+
+const TITLES = {
+  en: 'Abdul Baseer Anwar — Quran, Arabic & Islamic Studies Tutor',
+  ar: 'عبد البصير أنور — معلّم القرآن واللغة العربية والعلوم الشرعية'
+};
+
+const waLink = (text) => 'https://wa.me/' + CONFIG.whatsapp + (text ? '?text=' + encodeURIComponent(text) : '');
+document.querySelectorAll('.js-wa').forEach(a => a.href = waLink('Assalamu alaikum, I would like to know more about your classes.'));
+document.querySelectorAll('.js-phone').forEach(el => el.textContent = CONFIG.phoneDisplay);
+document.querySelectorAll('.js-email').forEach(el => el.textContent = CONFIG.email);
+document.querySelectorAll('.js-mail').forEach(a => a.href = 'mailto:' + CONFIG.email);
+document.getElementById('year').textContent = new Date().getFullYear();
+
+/* ===== Language toggle ===== */
+const nodes = [...document.querySelectorAll('[data-ar]')];
+nodes.forEach(el => el.dataset.en = el.innerHTML);
+const phNodes = [...document.querySelectorAll('[data-ar-placeholder]')];
+phNodes.forEach(el => el.dataset.enPlaceholder = el.placeholder);
+const altNodes = [...document.querySelectorAll('[data-ar-alt]')];
+altNodes.forEach(el => el.dataset.enAlt = el.alt);
+
+function setLang(lang) {
+  const ar = lang === 'ar';
+  document.documentElement.lang = lang;
+  document.documentElement.dir = ar ? 'rtl' : 'ltr';
+  document.title = TITLES[lang];
+  nodes.forEach(el => el.innerHTML = ar ? el.dataset.ar : el.dataset.en);
+  phNodes.forEach(el => el.placeholder = ar ? el.dataset.arPlaceholder : el.dataset.enPlaceholder);
+  altNodes.forEach(el => el.alt = ar ? el.dataset.arAlt : el.dataset.enAlt);
+  try { localStorage.setItem('lang', lang); } catch (e) {}
+}
+
+let initial = new URLSearchParams(location.search).get('lang');
+if (!initial) { try { initial = localStorage.getItem('lang'); } catch (e) {} }
+if (initial === 'ar') setLang('ar');
+
+document.getElementById('langToggle').addEventListener('click', () =>
+  setLang(document.documentElement.lang === 'ar' ? 'en' : 'ar'));
+
+/* ===== Mobile menu ===== */
+const links = document.getElementById('navLinks');
+document.getElementById('menuBtn').addEventListener('click', () => links.classList.toggle('open'));
+links.addEventListener('click', e => { if (e.target.tagName === 'A') links.classList.remove('open'); });
+
+/* ===== Enquiry form → WhatsApp ===== */
+document.getElementById('enquiry').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const text = `Assalamu alaikum,\nName: ${f.get('name')}\nStudent: ${f.get('who')}\nCourse: ${f.get('course')}` +
+    (f.get('msg') ? `\nMessage: ${f.get('msg')}` : '');
+  window.open(waLink(text), '_blank', 'noopener');
+});
+</script>
+</body>
+</html>
