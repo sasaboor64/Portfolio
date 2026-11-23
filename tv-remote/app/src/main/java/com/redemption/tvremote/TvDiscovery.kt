@@ -1,4 +1,4 @@
-package com.portfolio.tvremote
+package com.redemption.tvremote
 
 import android.content.Context
 import android.net.nsd.NsdManager

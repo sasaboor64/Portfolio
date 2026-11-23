@@ -1,4 +1,4 @@
-package com.portfolio.tvremote.protocol
+package com.redemption.tvremote.protocol
 
 import java.io.Closeable
 import java.io.IOException
@@ -26,6 +26,8 @@ class RemoteClient(
         fun onVolume(level: Int, max: Int, muted: Boolean) {}
         fun onPower(isOn: Boolean) {}
         fun onCurrentApp(packageName: String) {}
+        /** Model and maker the TV reports about itself, e.g. ("BRAVIA 4K UR2", "Sony"). */
+        fun onDeviceInfo(model: String, vendor: String) {}
     }
 
     @Volatile private var socket: SSLSocket? = null
@@ -69,6 +71,7 @@ class RemoteClient(
     private fun handle(msg: ProtoMessage) {
         when {
             msg.has(F_CONFIGURE) -> {
+                msg.message(F_CONFIGURE)?.message(2)?.let { listener.onDeviceInfo(it.string(1), it.string(2)) }
                 send {
                     message(F_CONFIGURE) {
                         varint(1, FEATURES)

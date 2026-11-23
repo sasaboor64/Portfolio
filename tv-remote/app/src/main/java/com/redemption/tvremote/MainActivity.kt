@@ -1,10 +1,14 @@
-package com.portfolio.tvremote
+package com.redemption.tvremote
 
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.res.ColorStateList
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Typeface
+import android.net.Uri
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
@@ -25,17 +29,21 @@ import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import com.portfolio.tvremote.protocol.ClientIdentity
-import com.portfolio.tvremote.protocol.KeyCode
-import com.portfolio.tvremote.protocol.KeyDirection
-import com.portfolio.tvremote.protocol.PairingClient
-import com.portfolio.tvremote.protocol.RemoteClient
+import android.window.OnBackInvokedDispatcher
+import com.redemption.tvremote.protocol.ClientIdentity
+import com.redemption.tvremote.protocol.KeyCode
+import com.redemption.tvremote.protocol.KeyDirection
+import com.redemption.tvremote.protocol.PairingClient
+import com.redemption.tvremote.protocol.RemoteClient
+import com.redemption.tvremote.protocol.SonyBravia
+import java.net.URL
 import java.io.File
 import java.net.ConnectException
 import java.net.NoRouteToHostException
@@ -50,6 +58,7 @@ class MainActivity : Activity() {
 
     /** What the Menu button sends. TVs differ, so the user can pick what works on theirs. */
     enum class MenuAction(val title: String, val detail: String) {
+        SONY_ACTION_MENU("Sony Action Menu", "Sony Bravia Quick Settings bar (picture, sound, speakers…). Needs IP control, set up below."),
         QUICK_MENU("TV quick menu", "Holds Home. Opens the Google TV / Android TV panel with picture, sound and settings."),
         SETTINGS_KEY("Settings key", "The gear / settings key found on many TV-brand remotes (TCL, Hisense, Sony, Philips)."),
         TV_MENU_KEY("TV menu key", "The TV context-menu key some remotes have."),
@@ -58,6 +67,10 @@ class MainActivity : Activity() {
 
     private val main = Handler(Looper.getMainLooper())
     private val io = Executors.newSingleThreadExecutor()
+    private val web = Executors.newSingleThreadExecutor()
+    private val appStore by lazy { AppStore(prefs) }
+    private val iconCache = HashMap<String, Bitmap>()
+    private var sonyClient: SonyBravia? = null
     private val prefs by lazy { getSharedPreferences("tv_remote", MODE_PRIVATE) }
     @Volatile private var identity: ClientIdentity? = null
 
@@ -82,6 +95,9 @@ class MainActivity : Activity() {
     private lateinit var navToggle: TextView
     private lateinit var volumeLabel: TextView
     private lateinit var muteButton: ImageButton
+    private lateinit var appsRow: LinearLayout
+    private lateinit var settingsPanel: View
+    private lateinit var settingsBody: LinearLayout
 
     private val savedHost: String? get() = prefs.getString(KEY_HOST, null)
     private val savedName: String? get() = prefs.getString(KEY_NAME, null)
@@ -89,8 +105,19 @@ class MainActivity : Activity() {
         get() = prefs.getBoolean(KEY_TRACKPAD, true)
         set(v) { prefs.edit().putBoolean(KEY_TRACKPAD, v).apply() }
     private var menuAction: MenuAction
-        get() = runCatching { MenuAction.valueOf(prefs.getString(KEY_MENU_ACTION, null)!!) }.getOrDefault(MenuAction.QUICK_MENU)
+        get() = runCatching { MenuAction.valueOf(prefs.getString(KEY_MENU_ACTION, null)!!) }
+            .getOrDefault(if (sonyPsk != null) MenuAction.SONY_ACTION_MENU else MenuAction.QUICK_MENU)
         set(v) { prefs.edit().putString(KEY_MENU_ACTION, v.name).apply() }
+
+    private val sonyPsk: String? get() = prefs.getString(KEY_SONY_PSK, null)?.takeIf { it.isNotEmpty() }
+
+    /** Sony IP-control client for the current TV, if a Pre-Shared Key has been set. */
+    private fun sony(): SonyBravia? {
+        val host = savedHost ?: return null
+        val psk = sonyPsk ?: return null
+        sonyClient?.let { if (it.host == host && it.psk == psk) return it }
+        return SonyBravia(host, psk).also { sonyClient = it }
+    }
 
     // ---------------------------------------------------------------- lifecycle
 
@@ -100,8 +127,10 @@ class MainActivity : Activity() {
         root = FrameLayout(this).apply { setBackgroundColor(color(R.color.bg)) }
         devicesPanel = buildDevicesPanel()
         remotePanel = buildRemotePanel()
+        settingsPanel = buildSettingsPanel().apply { visibility = View.GONE }
         root.addView(devicesPanel, FrameLayout.LayoutParams(-1, -1))
         root.addView(remotePanel, FrameLayout.LayoutParams(-1, -1))
+        root.addView(settingsPanel, FrameLayout.LayoutParams(-1, -1))
         root.setOnApplyWindowInsetsListener { v, insets ->
             if (Build.VERSION.SDK_INT >= 30) {
                 val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.ime())
@@ -114,6 +143,9 @@ class MainActivity : Activity() {
             insets
         }
         setContentView(root)
+        if (Build.VERSION.SDK_INT >= 33) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) { handleBack() }
+        }
         if (savedHost != null) showRemotePanel() else showDevicesPanel()
     }
 
@@ -133,17 +165,23 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         super.onDestroy()
         io.shutdownNow()
+        web.shutdownNow()
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        if (devicesPanel.visibility == View.VISIBLE && savedHost != null) {
-            showRemotePanel(); savedHost?.let { connect(it) }
-        } else {
-            @Suppress("DEPRECATION")
-            super.onBackPressed()
+    /** Back steps out of Settings / the TV list before leaving the app. */
+    private fun handleBack() {
+        when {
+            settingsPanel.visibility == View.VISIBLE -> closeSettings()
+            devicesPanel.visibility == View.VISIBLE && savedHost != null -> { showRemotePanel(); savedHost?.let { connect(it) } }
+            else -> finish()
         }
     }
+
+    // Android 12 and older. Android 13+ uses the OnBackInvokedCallback registered in onCreate.
+    @Deprecated("Deprecated in Java")
+    @Suppress("DEPRECATION")
+    @SuppressLint("GestureBackNavigation")
+    override fun onBackPressed() = handleBack()
 
     /** The phone's own volume buttons control the TV while the remote is showing. */
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -203,6 +241,12 @@ class MainActivity : Activity() {
                 client = RemoteClient(host, id, object : RemoteClient.Listener {
                     override fun onReady() {
                         main.post { if (remote === client) { setReady(true); setStatus("Connected", Status.OK) } }
+                    }
+
+                    override fun onDeviceInfo(model: String, vendor: String) {
+                        if (vendor.contains("sony", true) || model.contains("bravia", true)) {
+                            main.post { if (remote === client) suggestSonySetup() }
+                        }
                     }
 
                     override fun onVolume(level: Int, max: Int, muted: Boolean) {
@@ -318,6 +362,21 @@ class MainActivity : Activity() {
 
     private fun pressMenu() {
         when (menuAction) {
+            MenuAction.SONY_ACTION_MENU -> {
+                val tv = sony()
+                if (tv == null) {
+                    toast("Set up Sony IP control in ⚙ first")
+                    openSettings(atSony = true)
+                    return
+                }
+                web.execute {
+                    try {
+                        tv.pressButton(*SonyBravia.ACTION_MENU_NAMES)
+                    } catch (e: Exception) {
+                        main.post { toast("Sony: ${e.message ?: e.javaClass.simpleName}") }
+                    }
+                }
+            }
             MenuAction.QUICK_MENU -> {
                 // A real long-press of Home: key down, held, then released.
                 send(KeyCode.HOME, KeyDirection.START_LONG)
@@ -353,23 +412,6 @@ class MainActivity : Activity() {
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
         dialog.show()
         input.requestFocus()
-    }
-
-    private fun showRemoteSettings() {
-        val actions = MenuAction.entries
-        val items = actions.map { "${it.title}\n${it.detail}" }.toTypedArray()
-        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle("Menu button opens")
-            .setSingleChoiceItems(items, actions.indexOf(menuAction)) { d, which ->
-                menuAction = actions[which]
-                d.dismiss()
-                Toast.makeText(this, "Menu button: ${actions[which].title}", Toast.LENGTH_SHORT).show()
-            }
-            .setNeutralButton(if (useTrackpad) "Use D-pad instead" else "Use trackpad instead") { _, _ ->
-                useTrackpad = !useTrackpad; showNavigation()
-            }
-            .setNegativeButton("Close", null)
-            .show()
     }
 
     // ---------------------------------------------------------------- UI state
@@ -518,30 +560,39 @@ class MainActivity : Activity() {
         device.addView(titles, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(12) })
         header.addView(device, LinearLayout.LayoutParams(0, dp(60), 1f))
         header.addView(iconButton(R.drawable.ic_settings, "Remote settings", 48).apply {
-            setOnClickListener { showRemoteSettings() }
+            setOnClickListener { openSettings() }
         }, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(10) })
         header.addView(key(R.drawable.ic_power, "Power", KeyCode.POWER, Hold.NONE, 48,
             bg = R.color.danger_container, tint = R.color.danger),
             LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(10) })
         col.addView(header, LinearLayout.LayoutParams(-1, -2))
 
+        // App shortcuts
+        appsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        col.addView(HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            clipToPadding = false
+            addView(appsRow)
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
+        renderApps()
+
         val controls = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         remoteControls = controls
 
         // Back · Home · Menu
-        val menuButton = iconButton(R.drawable.ic_menu, "Menu", 60).apply {
+        val menuButton = iconButton(R.drawable.ic_menu, "Menu", 56).apply {
             bindTap(this) { pressMenu() }
         }
         controls.addView(evenRow(
-            labeled(key(R.drawable.ic_back, "Back", KeyCode.BACK, Hold.LONG, 60), "Back"),
-            labeled(key(R.drawable.ic_home, "Home", KeyCode.HOME, Hold.LONG, 60), "Home"),
+            labeled(key(R.drawable.ic_back, "Back", KeyCode.BACK, Hold.LONG, 56), "Back"),
+            labeled(key(R.drawable.ic_home, "Home", KeyCode.HOME, Hold.LONG, 56), "Home"),
             labeled(menuButton, "Menu"),
-        ), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(22) })
+        ), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(14) })
 
         // Navigation: trackpad or D-pad
         // The navigation area takes whatever height is left, so tall phones get a bigger trackpad.
         navHost = FrameLayout(this).apply { minimumHeight = dp(NAV_HEIGHT) }
-        controls.addView(navHost, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = dp(18) })
+        controls.addView(navHost, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = dp(14) })
         navToggle = chip("", R.drawable.ic_swap, R.color.surface_hi, R.color.muted, small = true) {
             useTrackpad = !useTrackpad; showNavigation()
         }
@@ -664,6 +715,388 @@ class MainActivity : Activity() {
         addView(key(downIcon, downDesc, downCode, Hold.REPEAT, 64, bg = null), LinearLayout.LayoutParams(dp(64), dp(60)))
     }
 
+    // ---------------------------------------------------------------- apps
+
+    private fun renderApps() {
+        appsRow.removeAllViews()
+        appStore.load().forEachIndexed { i, app ->
+            appsRow.addView(appTile(app), LinearLayout.LayoutParams(dp(68), -2).apply { if (i > 0) marginStart = dp(6) })
+        }
+        val add = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            contentDescription = "Add app"
+            addView(FrameLayout(context).apply {
+                background = rounded(R.color.surface, 16)
+                addView(icon(R.drawable.ic_plus, R.color.muted), FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER))
+            }, LinearLayout.LayoutParams(dp(52), dp(52)))
+            addView(text("Add", 11f, R.color.muted).apply { gravity = Gravity.CENTER },
+                LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(5) })
+            setOnClickListener { showAddApp() }
+        }
+        appsRow.addView(add, LinearLayout.LayoutParams(dp(68), -2).apply { marginStart = dp(6) })
+    }
+
+    private fun appTile(app: AppShortcut) = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER_HORIZONTAL
+        contentDescription = "Open ${app.name}"
+        addView(appBadge(app, 52), LinearLayout.LayoutParams(dp(52), dp(52)))
+        addView(text(app.name, 11f, R.color.text).apply {
+            gravity = Gravity.CENTER; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(5) })
+        setOnClickListener { it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY); launchApp(app) }
+        setOnLongClickListener { editApp(app); true }
+    }
+
+    /** Rounded square: the TV's own icon when known (Sony), otherwise colored initials. */
+    private fun appBadge(app: AppShortcut, sizeDp: Int): View {
+        val box = FrameLayout(this)
+        val radius = dp(sizeDp * 16 / 52).toFloat()
+        box.background = ripple(GradientDrawable().apply { cornerRadius = radius; setColor(app.color) })
+        box.clipToOutline = true
+        val label = TextView(this).apply {
+            text = app.initials
+            textSize = sizeDp * 0.34f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(0xFFFFFFFF.toInt())
+            gravity = Gravity.CENTER
+        }
+        box.addView(label, FrameLayout.LayoutParams(-1, -1))
+        if (app.iconUrl.isNotEmpty()) {
+            val img = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+            box.addView(img, FrameLayout.LayoutParams(-1, -1))
+            loadIcon(app.iconUrl) { bmp -> img.setImageBitmap(bmp); label.visibility = View.GONE }
+        }
+        return box
+    }
+
+    private fun loadIcon(url: String, onLoaded: (Bitmap) -> Unit) {
+        iconCache[url]?.let { onLoaded(it); return }
+        val file = File(cacheDir, "icon_" + Integer.toHexString(url.hashCode()))
+        web.execute {
+            val bmp = runCatching {
+                if (!file.exists()) URL(url).openStream().use { input -> file.outputStream().use { input.copyTo(it) } }
+                BitmapFactory.decodeFile(file.path)
+            }.getOrNull() ?: return@execute
+            main.post { iconCache[url] = bmp; onLoaded(bmp) }
+        }
+    }
+
+    private fun launchApp(app: AppShortcut) {
+        val kind = app.target.substringBefore(':')
+        val value = app.target.substringAfter(':')
+        if (kind == "sony") {
+            val tv = sony() ?: return toast("Set up Sony IP control in ⚙ to open ${app.name}")
+            web.execute {
+                try { tv.launch(value) } catch (e: Exception) { main.post { toast("Couldn't open ${app.name}: ${e.message}") } }
+            }
+            return
+        }
+        val r = remote?.takeIf { it.isReady } ?: return toast("Not connected to the TV")
+        r.openLink(if (kind == "pkg") "market://launch?id=$value" else value)
+    }
+
+    private fun editApp(app: AppShortcut) {
+        val list = appStore.load().toMutableList()
+        val i = list.indexOf(app).takeIf { it >= 0 } ?: return
+        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(app.name)
+            .setItems(arrayOf("Move left", "Move right", "Remove")) { _, which ->
+                when (which) {
+                    0 -> if (i > 0) list.add(i - 1, list.removeAt(i))
+                    1 -> if (i < list.lastIndex) list.add(i + 1, list.removeAt(i))
+                    2 -> list.removeAt(i)
+                }
+                appStore.save(list); renderApps()
+                if (settingsPanel.visibility == View.VISIBLE) renderSettings()
+            }
+            .show()
+    }
+
+    private fun showAddApp() {
+        val current = appStore.load()
+        val presets = AppPresets.all.filter { p -> current.none { it.target == p.target } }
+        val labels = presets.map { it.name } + listOf("Custom app…") +
+            (if (sonyPsk != null) listOf("Import apps from Sony TV…") else emptyList())
+        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle("Add an app")
+            .setItems(labels.toTypedArray()) { _, which ->
+                when {
+                    which < presets.size -> { appStore.save(current + presets[which]); afterAppsChanged() }
+                    which == presets.size -> showCustomApp()
+                    else -> importSonyApps()
+                }
+            }
+            .show()
+    }
+
+    private fun showCustomApp() {
+        val name = EditText(this).apply { hint = "Name, e.g. Disney+" }
+        val target = EditText(this).apply {
+            hint = "Package (com.example.tv) or link (https://…)"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+        }
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(8), dp(24), 0)
+            addView(name); addView(target)
+        }
+        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle("Custom app")
+            .setMessage("Find an app's package name in its Google Play web address: play.google.com/…?id=PACKAGE")
+            .setView(box)
+            .setPositiveButton("Add") { _, _ ->
+                val n = name.text.toString().trim()
+                val t = AppShortcut.targetFor(target.text.toString())
+                if (n.isEmpty() || t == null) return@setPositiveButton toast("Enter a name and a package name or link")
+                appStore.save(appStore.load() + AppShortcut(n, t, AppPresets.colorFor(n)))
+                afterAppsChanged()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun importSonyApps() {
+        val tv = sony() ?: return toast("Set up Sony IP control first")
+        toast("Getting the app list from your TV…")
+        web.execute {
+            val apps = try { tv.apps() } catch (e: Exception) {
+                main.post { toast("Sony: ${e.message}") }; return@execute
+            }
+            main.post {
+                val current = appStore.load()
+                val checked = BooleanArray(apps.size) { i -> current.any { it.target == "sony:${apps[i].uri}" } }
+                AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                    .setTitle("Apps on your TV")
+                    .setMultiChoiceItems(apps.map { it.title }.toTypedArray(), checked) { _, i, on -> checked[i] = on }
+                    .setPositiveButton("Save") { _, _ ->
+                        val kept = current.filter { !it.target.startsWith("sony:") }
+                        val chosen = apps.filterIndexed { i, _ -> checked[i] }.map {
+                            AppShortcut(it.title, "sony:${it.uri}", AppPresets.colorFor(it.title), it.icon)
+                        }
+                        appStore.save(chosen + kept.filter { k -> chosen.none { it.name.equals(k.name, true) } })
+                        afterAppsChanged()
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
+        }
+    }
+
+    private fun afterAppsChanged() {
+        renderApps()
+        if (settingsPanel.visibility == View.VISIBLE) renderSettings()
+    }
+
+    // ---------------------------------------------------------------- Sony
+
+    private fun suggestSonySetup() {
+        if (sonyPsk != null || prefs.getBoolean(KEY_SONY_ASKED, false) || isFinishing) return
+        prefs.edit().putBoolean(KEY_SONY_ASKED, true).apply()
+        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle("Sony Bravia detected")
+            .setMessage("Turn on Sony IP control so the Menu button opens your TV's Quick Settings " +
+                "(Action Menu) and the app can open your TV's apps. It takes about a minute.")
+            .setPositiveButton("Set up") { _, _ -> openSettings(atSony = true) }
+            .setNegativeButton("Not now", null)
+            .show()
+    }
+
+    private fun testSony(psk: String, status: TextView) {
+        val host = savedHost ?: return
+        status.setTextColor(color(R.color.muted))
+        status.text = "Checking…"
+        web.execute {
+            val result = try {
+                val tv = SonyBravia(host, psk)
+                if (!tv.isBravia()) throw SonyBravia.SonyException("No Sony Bravia answered at $host. Is IP control on?")
+                tv.remoteCodes()
+                tv.apps() // needs a correct Pre-Shared Key
+                null
+            } catch (e: Exception) {
+                e.message ?: e.javaClass.simpleName
+            }
+            main.post {
+                if (result == null) {
+                    prefs.edit().putString(KEY_SONY_PSK, psk).putString(KEY_MENU_ACTION, MenuAction.SONY_ACTION_MENU.name).apply()
+                    sonyClient = null
+                    toast("Sony IP control works. Menu now opens the Action Menu.")
+                    renderSettings()
+                } else {
+                    status.setTextColor(color(R.color.danger))
+                    status.text = result
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- settings screen
+
+    private var sonySection: View? = null
+
+    private fun openSettings(atSony: Boolean = false) {
+        renderSettings()
+        remotePanel.visibility = View.GONE
+        devicesPanel.visibility = View.GONE
+        settingsPanel.visibility = View.VISIBLE
+        val scroll = settingsPanel as ScrollView
+        scroll.scrollTo(0, 0)
+        if (atSony) scroll.post { sonySection?.let { scroll.smoothScrollTo(0, it.top) } }
+    }
+
+    private fun closeSettings() {
+        settingsPanel.visibility = View.GONE
+        remotePanel.visibility = View.VISIBLE
+        renderApps()
+        showNavigation()
+    }
+
+    private fun buildSettingsPanel(): View {
+        val col = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(8), dp(16), dp(32))
+        }
+        val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        header.addView(iconButton(R.drawable.ic_back, "Back", 48, bg = null).apply { setOnClickListener { closeSettings() } },
+            LinearLayout.LayoutParams(dp(48), dp(48)))
+        header.addView(text("Settings", 22f, R.color.text, bold = true),
+            LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
+        col.addView(header, LinearLayout.LayoutParams(-1, -2))
+        settingsBody = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        col.addView(settingsBody, LinearLayout.LayoutParams(-1, -2))
+        return ScrollView(this).apply { addView(col, FrameLayout.LayoutParams(-1, -2)) }
+    }
+
+    private fun renderSettings() {
+        val body = settingsBody
+        body.removeAllViews()
+
+        section(body, "Menu button") { card ->
+            MenuAction.entries.forEach { a ->
+                card.addView(optionRow(a.title, a.detail, a == menuAction) {
+                    menuAction = a
+                    if (a == MenuAction.SONY_ACTION_MENU && sonyPsk == null) toast("Set up Sony IP control below to use this")
+                    renderSettings()
+                })
+            }
+        }
+
+        sonySection = section(body, "Sony Bravia · IP control") { card ->
+            val pad = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(14), dp(16), dp(16)) }
+            val ok = sonyPsk != null
+            pad.addView(text(if (ok) "● Set up. Menu can open the Action Menu, and you can import your TV's apps."
+                else "Needed for the Sony Action Menu (Quick Settings) and for opening the exact apps on your TV.",
+                14f, if (ok) R.color.ok else R.color.text), LinearLayout.LayoutParams(-1, -2))
+            pad.addView(text("On the TV:\n" +
+                "1. Settings → Network & Internet → Home network → IP control\n" +
+                "2. Authentication → Normal and Pre-Shared Key\n" +
+                "3. Pre-Shared Key → pick a code, e.g. 1234\n" +
+                "4. Enter the same code here and tap Save.", 13f, R.color.muted).apply { setLineSpacing(0f, 1.2f) },
+                LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+            val psk = EditText(this).apply {
+                hint = "Pre-Shared Key"
+                setText(sonyPsk ?: "")
+                setTextColor(color(R.color.text)); setHintTextColor(color(R.color.muted))
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                background = rounded(R.color.surface_hi, 14)
+                setPadding(dp(14), dp(12), dp(14), dp(12))
+            }
+            val status = text("", 13f, R.color.muted)
+            row.addView(psk, LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(chip("Save", null, R.color.accent_container, R.color.accent) {
+                val v = psk.text.toString().trim()
+                if (v.isEmpty()) {
+                    prefs.edit().remove(KEY_SONY_PSK).apply(); sonyClient = null; renderSettings()
+                } else testSony(v, status)
+            }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(10) })
+            pad.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(14) })
+            pad.addView(status, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+            if (ok) pad.addView(chip("Import apps from TV", R.drawable.ic_tv, R.color.surface_hi) { importSonyApps() },
+                LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(4) })
+            card.addView(pad)
+        }
+
+        section(body, "Navigation") { card ->
+            card.addView(optionRow("Trackpad", "Swipe to move, tap for OK, hold for long-press OK.", useTrackpad) {
+                useTrackpad = true; renderSettings()
+            })
+            card.addView(optionRow("D-pad", "Arrow buttons with OK in the middle.", !useTrackpad) {
+                useTrackpad = false; renderSettings()
+            })
+        }
+
+        section(body, "Apps on the remote") { card ->
+            val apps = appStore.load()
+            if (apps.isEmpty()) card.addView(text("No apps yet.", 14f, R.color.muted).apply { setPadding(dp(16), dp(14), dp(16), dp(14)) })
+            apps.forEach { app ->
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(16), dp(10), dp(8), dp(10))
+                    background = ripple(null)
+                    setOnClickListener { editApp(app) }
+                }
+                row.addView(appBadge(app, 36), LinearLayout.LayoutParams(dp(36), dp(36)))
+                row.addView(text(app.name, 15f, R.color.text), LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(14) })
+                row.addView(text("Edit", 13f, R.color.accent).apply { setPadding(dp(8), dp(8), dp(8), dp(8)) })
+                card.addView(row)
+            }
+            val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(dp(12), dp(6), dp(12), dp(14)) }
+            actions.addView(chip("Add app", R.drawable.ic_plus, R.color.surface_hi) { showAddApp() })
+            actions.addView(chip("Reset", null, R.color.surface_hi) { appStore.save(AppPresets.defaults); afterAppsChanged() },
+                LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
+            card.addView(actions)
+        }
+
+        section(body, "About") { card ->
+            val pad = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(14), dp(16), dp(16)) }
+            val version = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: ""
+            pad.addView(text("${getString(R.string.app_name)} $version", 15f, R.color.text, bold = true))
+            pad.addView(text("No ads. No tracking. The app only talks to your TV on your home network.", 13f, R.color.muted),
+                LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
+            pad.addView(chip("Privacy policy", null, R.color.surface_hi) {
+                runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_URL))) }
+            }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(12) })
+            card.addView(pad)
+        }
+    }
+
+    private fun section(parent: LinearLayout, title: String, fill: (LinearLayout) -> Unit): View {
+        val heading = text(title.uppercase(), 12f, R.color.muted, bold = true).apply { letterSpacing = 0.06f }
+        parent.addView(heading, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(22); bottomMargin = dp(8); marginStart = dp(4) })
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply { cornerRadius = dp(20).toFloat(); setColor(color(R.color.surface)) }
+            clipToOutline = true
+        }
+        fill(card)
+        parent.addView(card, LinearLayout.LayoutParams(-1, -2))
+        return heading
+    }
+
+    private fun optionRow(title: String, detail: String, selected: Boolean, onClick: () -> Unit) = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(16), dp(12), dp(16), dp(12))
+        background = ripple(GradientDrawable().apply { setColor(color(if (selected) R.color.accent_container else R.color.surface)) })
+        setOnClickListener { onClick() }
+        val texts = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        texts.addView(text(title, 15f, if (selected) R.color.accent else R.color.text, bold = true))
+        texts.addView(text(detail, 13f, R.color.muted), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(2) })
+        addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
+        addView(View(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                if (selected) setColor(color(R.color.accent)) else setStroke(dp(2), color(R.color.muted))
+            }
+        }, LinearLayout.LayoutParams(dp(18), dp(18)).apply { marginStart = dp(12) })
+    }
+
+    private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+
     // ---------------------------------------------------------------- view helpers
 
     private fun key(
@@ -753,7 +1186,7 @@ class MainActivity : Activity() {
     private fun labeled(v: View, label: String) = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_HORIZONTAL
-        addView(v, LinearLayout.LayoutParams(dp(60), dp(60)))
+        addView(v, LinearLayout.LayoutParams(dp(56), dp(56)))
         addView(text(label, 12f, R.color.muted).apply {
             gravity = Gravity.CENTER
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
@@ -817,13 +1250,16 @@ class MainActivity : Activity() {
     private fun wrap() = LinearLayout.LayoutParams(-2, -2)
 
     companion object {
-        private const val NAV_HEIGHT = 252
+        private const val NAV_HEIGHT = 208
         private const val KEY_HOST = "host"
         private const val KEY_NAME = "name"
         private const val KEY_PAIRED = "paired_hosts"
         private const val KEY_TRACKPAD = "use_trackpad"
         private const val KEY_MENU_ACTION = "menu_action"
         private const val KEY_MENU_HINT_SHOWN = "menu_hint_shown"
+        private const val KEY_SONY_PSK = "sony_psk"
+        private const val KEY_SONY_ASKED = "sony_asked"
+        const val PRIVACY_URL = "https://sasaboor64.github.io/Portfolio/tv-remote/privacy-policy.html"
         private val RECONNECT = Any()
     }
 }

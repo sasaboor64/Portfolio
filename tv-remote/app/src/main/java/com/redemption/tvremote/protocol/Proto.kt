@@ -1,4 +1,4 @@
-package com.portfolio.tvremote.protocol
+package com.redemption.tvremote.protocol
 
 import java.io.ByteArrayOutputStream
 import java.io.EOFException

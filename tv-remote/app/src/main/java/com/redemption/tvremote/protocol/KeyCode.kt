@@ -1,4 +1,4 @@
-package com.portfolio.tvremote.protocol
+package com.redemption.tvremote.protocol
 
 /** Android KeyEvent key codes, which the remote protocol uses as-is. */
 object KeyCode {

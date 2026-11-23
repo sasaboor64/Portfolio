@@ -1,4 +1,4 @@
-package com.portfolio.tvremote
+package com.redemption.tvremote
 
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
@@ -12,8 +12,8 @@ import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
-import com.portfolio.tvremote.protocol.KeyCode
-import com.portfolio.tvremote.protocol.KeyDirection
+import com.redemption.tvremote.protocol.KeyCode
+import com.redemption.tvremote.protocol.KeyDirection
 import kotlin.math.abs
 import kotlin.math.hypot
 
