@@ -36,6 +36,8 @@ object KeyCode {
     const val GUIDE = 172
     const val SETTINGS = 176
     const val TV_INPUT = 178
+    /** KEYCODE_TV_MEDIA_CONTEXT_MENU: the "menu" key on some TV remotes. */
+    const val TV_CONTEXT_MENU = 257
 
     /** Key code for a character, used to type when the TV has no text field focused. */
     fun forChar(ch: Char): Int? = when (val c = ch.lowercaseChar()) {

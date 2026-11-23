@@ -5,19 +5,23 @@ It contains no ads, no analytics and no third-party SDKs, and it only talks to y
 
 ## Features
 
-- **Menu button**: sends the TV's Menu/Options key (`KEYCODE_MENU`). Tap for a normal
-  press. Hold for a long-press, which some apps use for extra options.
-- D-pad with OK. Arrows repeat while held. Long-press OK works too.
-- Back, Home, Power, Input, Settings, Info
-- Volume up/down/mute. The phone's own volume buttons also control the TV.
-- Play/pause, rewind, fast-forward, channel up/down
+- **Menu button**: opens the TV's own menu, like the button on a physical remote. By
+  default it holds Home, which opens the Google TV / Android TV quick panel (picture,
+  sound, settings). TVs differ, so ⚙ lets you choose the Settings key, the TV menu key,
+  or the in-app options key instead.
+- **Trackpad**: swipe to move, tap for OK, hold for a long-press OK. Switch to a classic
+  D-pad with the chip in its corner or in ⚙.
+- Back, Home, Power, Input
+- VOL and CH rockers like a physical remote. The VOL rocker shows the TV's volume, and
+  the phone's own volume buttons also control the TV.
+- Mute, play/pause, rewind, fast-forward
 - Keyboard: type text into the TV's search boxes
 - Finds TVs on the network automatically, or you can enter the IP address by hand
 - Remembers the paired TV and reconnects on launch
 
 ## Install
 
-Download `release/tv-remote-1.0.apk` onto your phone and open it. Allow
+Download `release/tv-remote.apk` onto your phone and open it. Allow
 "Install unknown apps" when Android asks. Requires Android 8.0 or newer.
 
 The first time you connect, the TV shows a 6-character code. Type it into the app to pair.
@@ -46,6 +50,7 @@ The app speaks the Android TV Remote protocol v2, the same one Google's own remo
 Code layout:
 
 - `protocol/`: plain Kotlin with no Android dependencies, covered by `FakeTvTest`
+- `TrackpadView.kt`: the swipe trackpad
 - `TvDiscovery.kt`: mDNS discovery of `_androidtvremote2._tcp`
 - `MainActivity.kt`: the UI
 
