@@ -19,7 +19,8 @@ It contains no ads, no analytics and no third-party SDKs, and it only talks to y
 - VOL and CH rockers like a physical remote. The VOL rocker shows the TV's volume, and
   the phone's own volume buttons also control the TV.
 - Mute, play/pause, rewind, fast-forward
-- Keyboard: type text into the TV's search boxes
+- **Live keyboard**: when a text box opens on the TV, a keyboard bar pops up on the phone and
+  every keystroke shows on the TV as you type. The keyboard button opens it by hand.
 - Finds TVs on the network automatically, or you can enter the IP address by hand
 - Remembers the paired TV and reconnects on launch
 

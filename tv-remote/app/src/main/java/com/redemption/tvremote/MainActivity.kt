@@ -489,7 +489,7 @@ class MainActivity : Activity() {
 
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         keyboardInput = EditText(this).apply {
-            hint = "Type here. It appears on the TV as you go."
+            hint = "Type here, it shows on the TV live"
             setTextColor(color(R.color.text)); setHintTextColor(color(R.color.muted))
             textSize = 16f
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
