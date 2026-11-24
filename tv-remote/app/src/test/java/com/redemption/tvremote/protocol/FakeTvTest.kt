@@ -167,7 +167,7 @@ class FakeTvTest {
         client.sendKey(KeyCode.MENU)
         client.sendKey(KeyCode.MENU, KeyDirection.START_LONG)
         client.sendKey(KeyCode.MENU, KeyDirection.END_LONG)
-        client.sendText("ok")
+        client.typeKeys("ok")
         client.openLink("https://example.com")
 
         fun key(m: ProtoMessage) = m.message(10)!!.let { it.int(1) to it.int(2) }
@@ -181,6 +181,59 @@ class FakeTvTest {
         tv.join(5000)
         client.close()
         server.close()
+    }
+
+    @Test
+    fun textFieldCountersFollowTheTv() {
+        val server = serverSocket()
+        val fromPhone = LinkedBlockingQueue<ProtoMessage>()
+        val step = LinkedBlockingQueue<Int>()
+        val tv = thread {
+            (server.accept() as SSLSocket).use { s ->
+                fun send(w: ProtoWriter) = Framing.write(s.outputStream, w.toByteArray())
+                fun next() = ProtoMessage.parse(Framing.read(s.inputStream)!!).also { fromPhone.add(it) }
+                send(ProtoWriter().message(1) { varint(1, 622) }); next()
+                send(ProtoWriter().message(2) { varint(1, 622) }); next()
+                // Keyboard opens on a search box that already says "stranger" (as in androidtvremote2 #51).
+                send(ProtoWriter().message(20) {
+                    message(1) { varint(1, 3); string(12, "com.google.android.tvlauncher") }
+                    message(2) { varint(1, 71); string(2, "stranger"); varint(3, 8); varint(4, 8); string(6, "Search") }
+                })
+                step.take(); next() // first edit
+                send(ProtoWriter().message(22) { message(2) { varint(1, 72); string(2, "stranger things") } })
+                step.take(); next() // second edit
+            }
+        }
+        val fields = LinkedBlockingQueue<Pair<RemoteClient.TextField?, Boolean>>()
+        val client = RemoteClient("127.0.0.1", phone, object : RemoteClient.Listener {
+            override fun onTextField(field: RemoteClient.TextField?, opened: Boolean) { fields.add(field to opened) }
+        }, port = server.localPort)
+        client.connect()
+        fromPhone.poll(5, TimeUnit.SECONDS); fromPhone.poll(5, TimeUnit.SECONDS)
+
+        val (opened, isOpen) = fields.poll(5, TimeUnit.SECONDS)!!
+        assertTrue(isOpen)
+        assertEquals("stranger", opened!!.value)
+        assertEquals("Search", opened.label)
+        assertTrue(client.hasTextField)
+
+        client.insertText(" things"); step.add(1)
+        val edit1 = fromPhone.poll(5, TimeUnit.SECONDS)!!.message(21)!!
+        assertEquals(3, edit1.int(1))   // ime counter from app_info.counter
+        assertEquals(71, edit1.int(2))  // field counter from the key inject
+        val obj = edit1.message(3)!!.message(2)!!
+        assertEquals(" things", obj.string(3))
+        assertEquals(6, obj.int(1)); assertEquals(6, obj.int(2))
+
+        val (echo, echoOpened) = fields.poll(5, TimeUnit.SECONDS)!!
+        assertFalse(echoOpened)
+        assertEquals("stranger things", echo!!.value)
+        client.insertText("!"); step.add(2)
+        val edit2 = fromPhone.poll(5, TimeUnit.SECONDS)!!.message(21)!!
+        assertEquals(3, edit2.int(1))
+        assertEquals(72, edit2.int(2))  // the newest field counter from the echo
+
+        tv.join(5000); client.close(); server.close()
     }
 
     @Test

@@ -17,8 +17,10 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.text.Editable
 import android.text.InputFilter
 import android.text.InputType
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
@@ -27,6 +29,7 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
@@ -43,6 +46,7 @@ import com.redemption.tvremote.protocol.KeyDirection
 import com.redemption.tvremote.protocol.PairingClient
 import com.redemption.tvremote.protocol.RemoteClient
 import com.redemption.tvremote.protocol.SonyBravia
+import com.redemption.tvremote.protocol.TextSync
 import java.net.URL
 import java.io.File
 import java.net.ConnectException
@@ -98,6 +102,9 @@ class MainActivity : Activity() {
     private lateinit var appsRow: LinearLayout
     private lateinit var settingsPanel: View
     private lateinit var settingsBody: LinearLayout
+    private lateinit var keyboardBar: View
+    private lateinit var keyboardInput: EditText
+    private lateinit var keyboardTitle: TextView
 
     private val savedHost: String? get() = prefs.getString(KEY_HOST, null)
     private val savedName: String? get() = prefs.getString(KEY_NAME, null)
@@ -131,6 +138,8 @@ class MainActivity : Activity() {
         root.addView(devicesPanel, FrameLayout.LayoutParams(-1, -1))
         root.addView(remotePanel, FrameLayout.LayoutParams(-1, -1))
         root.addView(settingsPanel, FrameLayout.LayoutParams(-1, -1))
+        keyboardBar = buildKeyboardBar().apply { visibility = View.GONE }
+        root.addView(keyboardBar, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM))
         root.setOnApplyWindowInsetsListener { v, insets ->
             if (Build.VERSION.SDK_INT >= 30) {
                 val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.ime())
@@ -171,6 +180,7 @@ class MainActivity : Activity() {
     /** Back steps out of Settings / the TV list before leaving the app. */
     private fun handleBack() {
         when {
+            keyboardBar.visibility == View.VISIBLE -> hideKeyboardBar()
             settingsPanel.visibility == View.VISIBLE -> closeSettings()
             devicesPanel.visibility == View.VISIBLE && savedHost != null -> { showRemotePanel(); savedHost?.let { connect(it) } }
             else -> finish()
@@ -226,6 +236,7 @@ class MainActivity : Activity() {
     }
 
     private fun disconnect() {
+        if (::keyboardBar.isInitialized && keyboardBar.visibility == View.VISIBLE) hideKeyboardBar()
         remote?.close(); remote = null
         pairing?.close(); pairing = null
         main.removeCallbacksAndMessages(RECONNECT)
@@ -247,6 +258,10 @@ class MainActivity : Activity() {
                         if (vendor.contains("sony", true) || model.contains("bravia", true)) {
                             main.post { if (remote === client) suggestSonySetup() }
                         }
+                    }
+
+                    override fun onTextField(field: RemoteClient.TextField?, opened: Boolean) {
+                        main.post { if (remote === client) onTvTextField(field, opened) }
                     }
 
                     override fun onVolume(level: Int, max: Int, muted: Boolean) {
@@ -392,26 +407,115 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun showKeyboardDialog() {
-        val input = EditText(this).apply {
-            hint = "Type to send to the TV"
-            inputType = InputType.TYPE_CLASS_TEXT
-            imeOptions = EditorInfo.IME_ACTION_SEND
+    // ---------------------------------------------------------------- live keyboard
+
+    private val textSync = TextSync(object : TextSync.Output {
+        override val structured get() = remote?.hasTextField == true
+        override fun insert(text: String) { remote?.insertText(text) }
+        override fun deleteBack(count: Int) { repeat(count) { send(KeyCode.DEL) } }
+        override fun typeKeys(text: String) { remote?.typeKeys(text) }
+    })
+    private var keyboardAuto = false
+    private var settingTextFromTv = false
+    private val syncTimeout = object : Runnable {
+        override fun run() { if (textSync.onTimeout()) main.postDelayed(this, SYNC_TIMEOUT_MS) }
+    }
+
+    private fun afterSync(waiting: Boolean) {
+        main.removeCallbacks(syncTimeout)
+        if (waiting) main.postDelayed(syncTimeout, SYNC_TIMEOUT_MS)
+    }
+
+    private fun onTvTextField(field: RemoteClient.TextField?, opened: Boolean) {
+        if (field == null) {
+            // The TV moved off a shared text field. Only auto-close what auto-opened.
+            if (opened && keyboardAuto && keyboardBar.visibility == View.VISIBLE) hideKeyboardBar()
+            return
         }
-        val box = FrameLayout(this).apply { setPadding(dp(24), dp(8), dp(24), 0); addView(input) }
-        val dialog = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle("Keyboard")
-            .setView(box)
-            .setPositiveButton("Send") { _, _ -> remote?.sendText(input.text.toString()) }
-            .setNeutralButton("Delete") { _, _ -> send(KeyCode.DEL) }
-            .setNegativeButton("Close", null)
-            .create()
-        input.setOnEditorActionListener { _, _, _ ->
-            remote?.sendText(input.text.toString()); send(KeyCode.ENTER); dialog.dismiss(); true
+        if (opened || keyboardBar.visibility != View.VISIBLE) {
+            showKeyboardBar(field.value, field.label, auto = true)
+        } else {
+            afterSync(textSync.onTvValue(field.value))
         }
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-        dialog.show()
-        input.requestFocus()
+    }
+
+    private fun showKeyboardBar(tvValue: String, label: String = "", auto: Boolean) {
+        if (remotePanel.visibility != View.VISIBLE) return
+        val wasOpen = keyboardBar.visibility == View.VISIBLE
+        keyboardAuto = auto && (!wasOpen || keyboardAuto)
+        textSync.reset(tvValue)
+        settingTextFromTv = true
+        keyboardInput.setText(tvValue)
+        keyboardInput.setSelection(tvValue.length)
+        settingTextFromTv = false
+        keyboardTitle.text = when {
+            label.isNotBlank() -> "Typing on TV · $label"
+            remote?.hasTextField == true -> "Typing on TV"
+            else -> "Typing on TV (key by key)"
+        }
+        keyboardBar.visibility = View.VISIBLE
+        keyboardInput.requestFocus()
+        keyboardInput.post {
+            (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
+                .showSoftInput(keyboardInput, InputMethodManager.SHOW_IMPLICIT)
+        }
+    }
+
+    private fun hideKeyboardBar() {
+        main.removeCallbacks(syncTimeout)
+        (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(keyboardInput.windowToken, 0)
+        keyboardInput.clearFocus()
+        keyboardBar.visibility = View.GONE
+    }
+
+    private fun buildKeyboardBar(): View {
+        val bar = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(10), dp(10), dp(12))
+            background = GradientDrawable().apply {
+                cornerRadii = floatArrayOf(dp(22).toFloat(), dp(22).toFloat(), dp(22).toFloat(), dp(22).toFloat(), 0f, 0f, 0f, 0f)
+                setColor(color(R.color.surface_hi))
+            }
+            elevation = dp(8).toFloat()
+            isClickable = true
+        }
+        val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        top.addView(icon(R.drawable.ic_keyboard, R.color.accent), LinearLayout.LayoutParams(dp(18), dp(18)))
+        keyboardTitle = text("Typing on TV", 13f, R.color.muted, bold = true).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
+        top.addView(keyboardTitle, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(8) })
+        top.addView(iconButton(R.drawable.ic_close, "Close keyboard", 36, bg = null).apply { setOnClickListener { hideKeyboardBar() } },
+            LinearLayout.LayoutParams(dp(36), dp(36)))
+        bar.addView(top, LinearLayout.LayoutParams(-1, -2))
+
+        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        keyboardInput = EditText(this).apply {
+            hint = "Type here. It appears on the TV as you go."
+            setTextColor(color(R.color.text)); setHintTextColor(color(R.color.muted))
+            textSize = 16f
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            imeOptions = EditorInfo.IME_ACTION_SEARCH or EditorInfo.IME_FLAG_NO_EXTRACT_UI
+            background = rounded(R.color.surface, 14)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            maxLines = 1
+            setOnEditorActionListener { _, _, _ ->
+                send(KeyCode.ENTER)
+                hideKeyboardBar()
+                true
+            }
+            addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+                override fun afterTextChanged(s: Editable?) {
+                    if (!settingTextFromTv) afterSync(textSync.onUserText(s?.toString() ?: ""))
+                }
+            })
+        }
+        row.addView(keyboardInput, LinearLayout.LayoutParams(0, -2, 1f))
+        row.addView(chip("Enter", null, R.color.accent_container, R.color.accent) {
+            send(KeyCode.ENTER); hideKeyboardBar()
+        }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
+        bar.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
+        return bar
     }
 
     // ---------------------------------------------------------------- UI state
@@ -606,7 +710,9 @@ class MainActivity : Activity() {
             addView(muteButton, LinearLayout.LayoutParams(dp(46), dp(46)))
             addView(key(R.drawable.ic_input, "Input source", KeyCode.TV_INPUT, Hold.NONE, 46),
                 LinearLayout.LayoutParams(dp(46), dp(46)).apply { topMargin = dp(9) })
-            addView(iconButton(R.drawable.ic_keyboard, "Keyboard", 46).apply { setOnClickListener { showKeyboardDialog() } },
+            addView(iconButton(R.drawable.ic_keyboard, "Keyboard", 46).apply { setOnClickListener {
+                if (keyboardBar.visibility == View.VISIBLE) hideKeyboardBar() else showKeyboardBar("", auto = false)
+            } },
                 LinearLayout.LayoutParams(dp(46), dp(46)).apply { topMargin = dp(9) })
         }
         controls.addView(evenRow(
@@ -1251,6 +1357,7 @@ class MainActivity : Activity() {
 
     companion object {
         private const val NAV_HEIGHT = 208
+        private const val SYNC_TIMEOUT_MS = 450L
         private const val KEY_HOST = "host"
         private const val KEY_NAME = "name"
         private const val KEY_PAIRED = "paired_hosts"

@@ -26,6 +26,11 @@ class RemoteClient(
         fun onVolume(level: Int, max: Int, muted: Boolean) {}
         fun onPower(isOn: Boolean) {}
         fun onCurrentApp(packageName: String) {}
+        /**
+         * A text field on the TV opened ([opened] = true) or reported its new contents after an
+         * edit ([opened] = false). [field] is null when the TV reports no shared text field.
+         */
+        fun onTextField(field: TextField?, opened: Boolean) {}
         /** Model and maker the TV reports about itself, e.g. ("BRAVIA 4K UR2", "Sony"). */
         fun onDeviceInfo(model: String, vendor: String) {}
     }
@@ -37,9 +42,20 @@ class RemoteClient(
     private val writer: ExecutorService = Executors.newSingleThreadExecutor { r -> Thread(r, "tv-remote-writer") }
 
     // Text-input state reported by the TV when a text field has focus.
+    /** Snapshot of the TV's focused text field. */
+    data class TextField(val value: String, val start: Int, val end: Int, val label: String, val counter: Int)
+
+    // Text-input counters. Every edit must quote the latest values or the TV ignores it.
+    // Rules follow the reference implementation (androidtvremote2) and device reports
+    // from Sony Bravia: ime counter = app_info.counter from the key-inject message; field
+    // counter = the newest text_field_status.counter_field (it changes after every edit).
     @Volatile private var imeCounter = 0
     @Volatile private var fieldCounter = 0
-    @Volatile private var imeActive = false
+    @Volatile private var hasImeCounter = false
+    @Volatile private var hasFieldCounter = false
+
+    /** True once the TV has told us which text field has focus. */
+    val hasTextField: Boolean get() = hasImeCounter || hasFieldCounter
 
     fun connect() {
         Thread({ run() }, "tv-remote-reader").apply { isDaemon = true }.start()
@@ -102,18 +118,24 @@ class RemoteClient(
                 listener.onVolume(it.int(7), it.int(6), it.bool(8))
             }
             msg.has(F_IME_KEY_INJECT) -> msg.message(F_IME_KEY_INJECT)?.let { ime ->
-                ime.message(1)?.string(12)?.takeIf { it.isNotEmpty() }?.let(listener::onCurrentApp)
-                ime.message(2)?.let { status ->
-                    fieldCounter = status.int(1)
-                    imeActive = true
-                }
+                val app = ime.message(1)
+                app?.string(12)?.takeIf { it.isNotEmpty() }?.let(listener::onCurrentApp)
+                imeCounter = app?.int(1) ?: 0
+                hasImeCounter = imeCounter != 0
+                val status = ime.message(2)
+                fieldCounter = status?.int(1) ?: 0
+                hasFieldCounter = fieldCounter != 0
+                listener.onTextField(status?.takeIf { hasFieldCounter || hasImeCounter }?.let(::textField), opened = true)
+            }
+            msg.has(F_IME_SHOW_REQUEST) -> msg.message(F_IME_SHOW_REQUEST)?.message(2)?.let { status ->
+                fieldCounter = status.int(1)
+                hasFieldCounter = true
+                listener.onTextField(textField(status), opened = false)
             }
             msg.has(F_IME_BATCH_EDIT) -> msg.message(F_IME_BATCH_EDIT)?.let {
-                imeCounter = it.int(1)
-                fieldCounter = it.int(2)
-                imeActive = true
+                if (!hasImeCounter) imeCounter = it.int(1)
+                if (!hasFieldCounter) fieldCounter = it.int(2)
             }
-            msg.has(F_IME_SHOW_REQUEST) -> imeActive = true
         }
     }
 
@@ -122,25 +144,28 @@ class RemoteClient(
     }
 
     /**
-     * Types [text] on the TV. Uses the TV's text-input channel when a text field is
-     * focused there, otherwise falls back to individual key presses.
+     * Inserts [text] at the TV's cursor in the focused text field. Some apps replace the
+     * whole field instead; [com.redemption.tvremote.protocol.TextSync] detects and handles that.
      */
-    fun sendText(text: String) {
+    fun insertText(text: String) {
         if (text.isEmpty()) return
-        if (imeActive) {
-            send {
-                message(F_IME_BATCH_EDIT) {
-                    varint(1, imeCounter)
-                    varint(2, fieldCounter)
-                    message(3) {
-                        varint(1, 1)
-                        message(2) { varint(1, text.length - 1); varint(2, text.length - 1); string(3, text) }
-                    }
+        // Cursor value as used by the version tested on a Sony Bravia (androidtvremote2 #51).
+        val cursor = text.length - 1
+        send {
+            message(F_IME_BATCH_EDIT) {
+                varint(1, imeCounter)
+                varint(2, fieldCounter)
+                message(3) {
+                    varint(1, 1)
+                    message(2) { varint(1, cursor); varint(2, cursor); string(3, text) }
                 }
             }
-        } else {
-            text.forEach { ch -> KeyCode.forChar(ch)?.let { sendKey(it) } }
         }
+    }
+
+    /** Types [text] one key at a time (for apps that don't share their text field). */
+    fun typeKeys(text: String) {
+        text.forEach { ch -> KeyCode.forChar(ch)?.let { sendKey(it) } }
     }
 
     /** Opens an app link / deep link on the TV, e.g. "https://www.youtube.com". */
@@ -169,6 +194,9 @@ class RemoteClient(
         writer.shutdown()
         runCatching { socket?.close() }
     }
+
+    private fun textField(status: ProtoMessage) =
+        TextField(status.string(2), status.int(3), status.int(4), status.string(6), status.int(1))
 
     companion object {
         const val DEFAULT_PORT = 6466

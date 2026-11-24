@@ -14,7 +14,8 @@ import java.net.URL
  */
 class SonyBravia(val host: String, val psk: String, private val port: Int = 80) {
 
-    class SonyException(message: String) : IOException(message)
+    open class SonyException(message: String) : IOException(message)
+    class NotFound(val path: String) : SonyException("IP control is off on the TV (nothing at $path)")
 
     data class SonyApp(val title: String, val uri: String, val icon: String)
 
@@ -47,13 +48,44 @@ class SonyBravia(val host: String, val psk: String, private val port: Int = 80) 
         sendIrcc(code)
     }
 
+    // Some Bravias serve /sony/ircc, others only /sony/IRCC (a 404 tells us which), and some
+    // ignore the first command after ~10+ idle minutes. Same handling as pybravia.
+    @Volatile private var irccPath = "/sony/ircc"
+    @Volatile private var irccWokenAt = 0L
+
     fun sendIrcc(code: String) {
+        val now = System.currentTimeMillis()
+        if (now - irccWokenAt > 10 * 60_000L) {
+            try { postIrcc("") } catch (e: NotFound) { irccPath = swapCase(irccPath) } catch (_: IOException) {}
+            irccWokenAt = now
+        }
+        try {
+            postIrcc(code)
+        } catch (e: NotFound) {
+            irccPath = swapCase(irccPath)
+            try {
+                postIrcc(code)
+            } catch (e2: NotFound) {
+                throw SonyException("The TV has no remote-button service (tried /sony/ircc and /sony/IRCC)")
+            }
+        }
+    }
+
+    private fun swapCase(path: String) =
+        if (path.endsWith("ircc")) path.removeSuffix("ircc") + "IRCC" else path.removeSuffix("IRCC") + "ircc"
+
+    private fun postIrcc(code: String) {
         val soap = """<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" """ +
             """s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body>""" +
             """<u:X_SendIRCC xmlns:u="urn:schemas-sony-com:service:IRCC:1"><IRCCCode>${xml(code)}</IRCCCode>""" +
             """</u:X_SendIRCC></s:Body></s:Envelope>"""
-        post("/sony/IRCC", soap, auth = true, contentType = "text/xml; charset=UTF-8",
-            soapAction = "\"urn:schemas-sony-com:service:IRCC:1#X_SendIRCC\"")
+        try {
+            post(irccPath, soap, auth = true, contentType = "text/xml; charset=UTF-8",
+                soapAction = "\"urn:schemas-sony-com:service:IRCC:1#X_SendIRCC\"")
+        } catch (e: SonyException) {
+            if (e is NotFound || code.isEmpty()) throw e
+            throw SonyException(if (e.message?.contains("500") == true) "The TV refused that button" else e.message ?: "IRCC failed")
+        }
     }
 
     fun apps(): List<SonyApp> {
@@ -96,7 +128,7 @@ class SonyBravia(val host: String, val psk: String, private val port: Int = 80) 
             conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
             val status = conn.responseCode
             if (status == 403 || status == 401) throw SonyException("TV rejected the Pre-Shared Key")
-            if (status == 404) throw SonyException("IP control is off on the TV")
+            if (status == 404) throw NotFound(path)
             val stream = if (status in 200..299) conn.inputStream else conn.errorStream
             val text = stream?.bufferedReader()?.use { it.readText() } ?: ""
             if (status !in 200..299) throw SonyException("TV answered HTTP $status")

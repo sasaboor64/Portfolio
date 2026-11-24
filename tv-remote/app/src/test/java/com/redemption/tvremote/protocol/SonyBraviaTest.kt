@@ -15,6 +15,8 @@ class SonyBraviaTest {
 
     private lateinit var server: ServerSocket
     private val requests = CopyOnWriteArrayList<Req>()
+    /** The only IRCC path this fake TV answers (TVs differ in case). */
+    @Volatile private var irccPath = "/sony/IRCC"
 
     /** Minimal HTTP/1.1 server: one request per connection. */
     @Before fun start() {
@@ -36,9 +38,11 @@ class SonyBraviaTest {
                     val body = ByteArray(len).also { var r = 0; while (r < len) r += input.read(it, r, len - r) }.toString(Charsets.UTF_8)
                     val psk = headers["x-auth-psk"]
                     requests.add(Req(path, psk, headers["soapaction"], body))
-                    val reply = respond(path, psk, body).toByteArray()
+                    val notFound = path.startsWith("/sony/") && path.equals("/sony/ircc", true) && path != irccPath
+                    val reply = (if (notFound) "" else respond(path, psk, body)).toByteArray()
+                    val statusLine = if (notFound) "404 Not Found" else "200 OK"
                     s.getOutputStream().apply {
-                        write("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${reply.size}\r\nConnection: close\r\n\r\n".toByteArray())
+                        write("HTTP/1.1 $statusLine\r\nContent-Type: application/json\r\nContent-Length: ${reply.size}\r\nConnection: close\r\n\r\n".toByteArray())
                         write(reply); flush()
                     }
                 }
@@ -52,7 +56,7 @@ class SonyBraviaTest {
               {"name":"ActionMenu","value":"AAAAAgAAAMQAAABLAw=="},{"name":"Options","value":"AAAAAgAAAJcAAAA2Aw=="}]],"id":1}"""
         path == "/sony/system" -> """{"result":[{"productName":"BRAVIA"}],"id":1}"""
         psk != "1234" -> """{"error":[403,"Forbidden"],"id":1}"""
-        path == "/sony/IRCC" -> "<ok/>"
+        path.equals("/sony/ircc", true) -> "<ok/>"
         body.contains("getApplicationList") ->
             """{"result":[[{"title":"Netflix","uri":"com.sony.dtv.com.netflix.ninja.com.netflix.ninja.MainActivity","icon":"http:\/\/tv\/n.png"},
               {"uri":"com.sony.dtv.yt","title":"YouTube \"TV\"","icon":""}]],"id":1}"""
@@ -72,6 +76,19 @@ class SonyBraviaTest {
         assertEquals("1234", ircc.psk)
         assertEquals("\"urn:schemas-sony-com:service:IRCC:1#X_SendIRCC\"", ircc.soap)
         assertTrue(ircc.body.contains("<IRCCCode>AAAAAgAAAMQAAABLAw==</IRCCCode>"))
+    }
+
+    @Test fun findsTheIrccPathWhicheverCaseTheTvUses() {
+        for (served in listOf("/sony/IRCC", "/sony/ircc")) {
+            irccPath = served
+            requests.clear()
+            tv().pressButton(*SonyBravia.ACTION_MENU_NAMES)
+            val ircc = requests.filter { it.path.equals("/sony/ircc", true) }
+            assertEquals(served, ircc.last().path)
+            assertTrue(ircc.last().body.contains("AAAAAgAAAMQAAABLAw=="))
+            // The first IRCC call is an empty wake-up request.
+            assertTrue(ircc.first().body.contains("<IRCCCode></IRCCCode>"))
+        }
     }
 
     @Test fun listsAndLaunchesApps() {
