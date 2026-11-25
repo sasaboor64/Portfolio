@@ -88,6 +88,11 @@ class SonyBravia(val host: String, val psk: String, private val port: Int = 80) 
         }
     }
 
+    /** Wakes the TV from standby (needs "Remote start" on, which IP control usually enables). */
+    fun powerOn() {
+        checkError(post("/sony/system", rpc("setPowerStatus", """{"status":true}"""), auth = true))
+    }
+
     fun apps(): List<SonyApp> {
         val body = post("/sony/appControl", rpc("getApplicationList"), auth = true)
         checkError(body)

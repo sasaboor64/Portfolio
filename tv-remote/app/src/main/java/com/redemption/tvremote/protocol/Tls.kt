@@ -8,6 +8,7 @@ import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.SecureRandom
+import java.security.cert.CertificateException
 import java.security.cert.X509Certificate
 import java.util.Date
 import javax.net.ssl.KeyManagerFactory
@@ -66,30 +67,63 @@ class ClientIdentity(val privateKey: PrivateKey, val certificate: X509Certificat
     }
 }
 
-internal object Tls {
-    /** TVs present self-signed certificates; trust comes from the pairing code instead. */
-    private object AcceptAll : X509TrustManager {
-        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-        override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-        override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+/** SHA-256 of a certificate's public key, as hex. Stays the same if the TV re-issues its cert with the same key. */
+fun X509Certificate.pin(): String =
+    java.security.MessageDigest.getInstance("SHA-256").digest(publicKey.encoded).joinToString("") { "%02x".format(it) }
+
+/**
+ * Trust-on-first-use. TVs use self-signed certificates, so there is no CA to check against:
+ * - [expectedPin] == null (pairing, or the first connection right after it): the certificate
+ *   is accepted and recorded in [seenPin]; pairing then proves it cryptographically with the code.
+ * - [expectedPin] set: the certificate must have exactly that public key, or the connection fails.
+ */
+class PinnedTrustManager(private val expectedPin: String?) : X509TrustManager {
+    @Volatile var seenPin: String? = null
+        private set
+
+    override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {
+        throw CertificateException("This app only connects as a client")
     }
 
-    fun context(identity: ClientIdentity): SSLContext {
+    override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
+        val leaf = chain?.firstOrNull() ?: throw CertificateException("TV sent no certificate")
+        leaf.checkValidityLenient()
+        val pin = leaf.pin()
+        if (expectedPin != null && !pin.equals(expectedPin, ignoreCase = true)) {
+            throw CertificateException("TV certificate changed (expected $expectedPin, got $pin)")
+        }
+        seenPin = pin
+    }
+
+    override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+
+    // Many TVs ship certificates with odd validity dates and clocks may be unset in standby,
+    // so expiry is not enforced; a certificate that is not yet valid by years is still refused.
+    private fun X509Certificate.checkValidityLenient() {
+        val tenYears = 10L * 365 * 24 * 3600 * 1000
+        if (notBefore.time > System.currentTimeMillis() + tenYears) throw CertificateException("Certificate not valid yet")
+    }
+}
+
+internal object Tls {
+    fun context(identity: ClientIdentity, trust: X509TrustManager): SSLContext {
         val pw = CharArray(0)
         val ks = KeyStore.getInstance("PKCS12")
         ks.load(null, null)
         ks.setKeyEntry("client", identity.privateKey, pw, arrayOf(identity.certificate))
         val kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
         kmf.init(ks, pw)
-        return SSLContext.getInstance("TLS").apply { init(kmf.keyManagers, arrayOf(AcceptAll), SecureRandom()) }
+        return SSLContext.getInstance("TLS").apply { init(kmf.keyManagers, arrayOf(trust), SecureRandom()) }
     }
 
-    fun connect(host: String, port: Int, identity: ClientIdentity, timeoutMs: Int = 5000): SSLSocket {
+    fun connect(
+        host: String, port: Int, identity: ClientIdentity, trust: X509TrustManager, timeoutMs: Int = 5000,
+    ): SSLSocket {
         val raw = Socket()
         try {
             raw.connect(InetSocketAddress(host, port), timeoutMs)
             raw.tcpNoDelay = true
-            val socket = context(identity).socketFactory.createSocket(raw, host, port, true) as SSLSocket
+            val socket = context(identity, trust).socketFactory.createSocket(raw, host, port, true) as SSLSocket
             socket.useClientMode = true
             socket.soTimeout = timeoutMs
             socket.startHandshake()

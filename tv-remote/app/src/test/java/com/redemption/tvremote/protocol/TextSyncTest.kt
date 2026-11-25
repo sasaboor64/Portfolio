@@ -11,13 +11,21 @@ class TextSyncTest {
         var replaces: Boolean = false,
         val echoes: Boolean = true,
         var structured0: Boolean = true,
+        /** This TV answers edits to real fields (Sony). */
+        val tvReports: Boolean = echoes,
+        /** False when the "field" is stale: the app on screen draws its own keyboard. */
+        val fieldExists: Boolean = true,
     ) : TextSync.Output {
+        var gone = false
         var value = ""
         val log = mutableListOf<String>()
         val pendingEchoes = ArrayDeque<String>()
         override val structured get() = structured0
+        override val reportsEdits get() = tvReports
+        override fun fieldGone() { gone = true; structured0 = false }
         override fun insert(text: String) {
             log += "insert:$text"
+            if (!fieldExists) return // stale counters: the TV drops the edit and says nothing
             value = if (replaces) text else value + text
             if (echoes) pendingEchoes.addLast(value)
         }
@@ -100,6 +108,22 @@ class TextSyncTest {
         for (ch in "netflix") { cur += ch; if (sync.onUserText(cur)) sync.onTimeout() }
         sync.onUserText("net"); sync.onTimeout()
         assertEquals("net", f.value)
+    }
+
+    @Test fun staleFieldOnASonyFallsBackToKeys() {
+        // Netflix / Prime Video: the remote still has YouTube's field counters, but the app on
+        // screen draws its own keyboard, so edits go nowhere and the TV stays silent.
+        val f = FakeField(tvReports = true, fieldExists = false)
+        val sync = TextSync(f).apply { reset("") }
+        var cur = ""
+        for (ch in "dune") {
+            cur += ch
+            if (sync.onUserText(cur)) { deliver(f, sync); while (sync.onTimeout()) {} }
+        }
+        assertTrue(f.gone)
+        assertTrue(sync.keysMode)
+        assertEquals("dune", f.value)
+        assertEquals(1, f.log.count { it.startsWith("insert:") }) // only the first attempt
     }
 
     @Test fun appsWithoutFieldInfoGetKeyPresses() {

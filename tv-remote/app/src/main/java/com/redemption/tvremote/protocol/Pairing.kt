@@ -26,8 +26,12 @@ class PairingClient(
     private var socket: SSLSocket? = null
     private var serverCert: X509Certificate? = null
 
+    /** Fingerprint of the TV's certificate; save it once [finish] succeeds. */
+    val serverPin: String? get() = serverCert?.pin()
+
     fun start(clientName: String) {
-        val s = Tls.connect(host, port, identity)
+        // Pairing accepts the TV's certificate on first sight; the code check below binds it.
+        val s = Tls.connect(host, port, identity, PinnedTrustManager(expectedPin = null))
         socket = s
         s.soTimeout = 15_000
         serverCert = s.session.peerCertificates.firstOrNull() as? X509Certificate

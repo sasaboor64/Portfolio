@@ -13,6 +13,10 @@ class TextSync(private val out: Output) {
     interface Output {
         /** True when the TV shares its text field, so [insert] can be used. */
         val structured: Boolean
+        /** True when this TV reports a field back after every edit it applies. */
+        val reportsEdits: Boolean
+        /** The shared field turned out to be gone; stop using it. */
+        fun fieldGone() {}
         fun insert(text: String)
         fun deleteBack(count: Int)
         fun typeKeys(text: String)
@@ -29,6 +33,10 @@ class TextSync(private val out: Output) {
     var replaceMode = false
         private set
 
+    /** True once edits fell back to key presses for this field. */
+    var keysMode = false
+        private set
+
     /** Field states we expect the TV to report, in order, for edits already sent. */
     private val expected = ArrayDeque<String>()
     private var echoesSeen = false
@@ -37,7 +45,7 @@ class TextSync(private val out: Output) {
     /** A new field was focused on the TV, holding [tvValue]. */
     fun reset(tvValue: String) {
         synced = tvValue; desired = tvValue
-        replaceMode = false; expected.clear(); echoesSeen = false; corrections = 0
+        replaceMode = false; keysMode = false; expected.clear(); echoesSeen = false; corrections = 0
     }
 
     /**
@@ -52,6 +60,7 @@ class TextSync(private val out: Output) {
 
     /** The TV reported its field value (after an edit, or on its own). */
     fun onTvValue(value: String): Boolean {
+        if (keysMode) return false // this field is driven by key presses now
         echoesSeen = true
         val idx = expected.indexOf(value)
         if (idx >= 0) {
@@ -73,6 +82,14 @@ class TextSync(private val out: Output) {
 
     /** No answer from the TV: assume the edits landed and continue. */
     fun onTimeout(): Boolean {
+        if (expected.isNotEmpty() && !echoesSeen && out.reportsEdits) {
+            // This TV always answers edits to a real field. Silence means no such field here
+            // (apps like Netflix draw their own keyboard), so retype what didn't land as keys.
+            expected.clear()
+            keysMode = true
+            out.fieldGone()
+            return flush()
+        }
         if (expected.isNotEmpty()) {
             synced = expected.last()
             expected.clear()
@@ -88,7 +105,7 @@ class TextSync(private val out: Output) {
         expected.clear()
         if (desired == synced) return false
 
-        if (!out.structured) {
+        if (keysMode || !out.structured) {
             val p = commonPrefix(synced, desired)
             if (synced.length > p) out.deleteBack(synced.length - p)
             if (desired.length > p) out.typeKeys(desired.substring(p))

@@ -217,10 +217,27 @@ class MainActivity : Activity() {
 
     private fun isPaired(host: String) = prefs.getStringSet(KEY_PAIRED, emptySet())!!.contains(host)
 
+    private fun pinKey(host: String) = "pin_$host"
+
     private fun setPaired(host: String, paired: Boolean) {
+        // A new pairing (or losing one) means the TV's certificate is learned again.
+        prefs.edit().remove(pinKey(host)).apply()
         val set = prefs.getStringSet(KEY_PAIRED, emptySet())!!.toMutableSet()
         if (paired) set.add(host) else set.remove(host)
         prefs.edit().putStringSet(KEY_PAIRED, set).apply()
+    }
+
+    private fun moveTv(old: String, new: String) {
+        val paired = isPaired(old)
+        val pin = prefs.getString(pinKey(old), null)
+        prefs.edit().putString(KEY_HOST, new).apply()
+        if (paired) {
+            setPaired(new, true)
+            if (pin != null) prefs.edit().putString(pinKey(new), pin).apply()
+        }
+        sonyClient = null
+        discovery.stop()
+        connect(new)
     }
 
     private fun selectTv(host: String, name: String) {
@@ -236,6 +253,7 @@ class MainActivity : Activity() {
     }
 
     private fun disconnect() {
+        lastField = null
         if (::keyboardBar.isInitialized && keyboardBar.visibility == View.VISIBLE) hideKeyboardBar()
         remote?.close(); remote = null
         pairing?.close(); pairing = null
@@ -249,9 +267,16 @@ class MainActivity : Activity() {
             main.post {
                 if (!started || savedHost != host) return@post
                 lateinit var client: RemoteClient
+                val pin = prefs.getString(pinKey(host), null)
                 client = RemoteClient(host, id, object : RemoteClient.Listener {
                     override fun onReady() {
-                        main.post { if (remote === client) { setReady(true); setStatus("Connected", Status.OK) } }
+                        main.post {
+                            if (remote !== client) return@post
+                            // First connection after pairing: remember the TV's certificate.
+                            if (pin == null) client.serverPin?.let { prefs.edit().putString(pinKey(host), it).apply() }
+                            discovery.stop()
+                            setReady(true); setStatus("Connected", Status.OK)
+                        }
                     }
 
                     override fun onDeviceInfo(model: String, vendor: String) {
@@ -271,7 +296,7 @@ class MainActivity : Activity() {
                     override fun onDisconnected(error: Throwable?, beforeReady: Boolean) {
                         main.post { if (remote === client) onRemoteLost(host, error, beforeReady) }
                     }
-                }, deviceModel = Build.MODEL ?: "Phone", deviceVendor = Build.MANUFACTURER ?: "Android")
+                }, deviceModel = Build.MODEL ?: "Phone", deviceVendor = Build.MANUFACTURER ?: "Android", expectedPin = pin)
                 remote = client
                 client.connect()
             }
@@ -285,9 +310,15 @@ class MainActivity : Activity() {
         when {
             error is ConnectException || error is SocketTimeoutException ||
                 error is NoRouteToHostException || error is UnknownHostException ->
-                setStatus("Can't reach the TV. Is it on, and on the same Wi-Fi?", Status.ERROR, retry = true)
+            {
+                setStatus("Can't reach the TV. Retrying…", Status.ERROR, retry = true)
+                // The TV may be off, or its address may have changed: look for it by name.
+                discovery.start()
+                main.postAtTime({ if (started && savedHost == host && remote == null) openRemote(host) }, RECONNECT,
+                    SystemClock.uptimeMillis() + 10_000)
+            }
             beforeReady -> {
-                // The TV refused our certificate: it has forgotten us, so pair again.
+                // The TV refused us, or its certificate no longer matches: pair again.
                 setPaired(host, false)
                 startPairing(host)
             }
@@ -372,7 +403,23 @@ class MainActivity : Activity() {
     // ---------------------------------------------------------------- sending
 
     private fun send(code: Int, direction: KeyDirection = KeyDirection.SHORT) {
-        remote?.takeIf { it.isReady }?.sendKey(code, direction)
+        val r = remote?.takeIf { it.isReady }
+        if (r != null) { r.sendKey(code, direction); return }
+        if (code == KeyCode.POWER) powerOnViaSony()
+    }
+
+    /** A TV in standby can't take remote keys; a Bravia with IP control can still be woken. */
+    private fun powerOnViaSony() {
+        val tv = sony() ?: return toast("TV is off or unreachable")
+        toast("Turning the TV on…")
+        web.execute {
+            try {
+                tv.powerOn()
+                main.postDelayed({ savedHost?.let { if (started && remote == null) connect(it) } }, 6000)
+            } catch (e: Exception) {
+                main.post { toast("Couldn't wake the TV: ${e.message}") }
+            }
+        }
     }
 
     private fun pressMenu() {
@@ -411,6 +458,12 @@ class MainActivity : Activity() {
 
     private val textSync = TextSync(object : TextSync.Output {
         override val structured get() = remote?.hasTextField == true
+        override val reportsEdits get() = remote?.reportsEdits == true
+        override fun fieldGone() {
+            lastField = null
+            remote?.forgetTextField()
+            if (keyboardBar.visibility == View.VISIBLE) keyboardTitle.text = "Typing on TV (key by key)"
+        }
         override fun insert(text: String) { remote?.insertText(text) }
         override fun deleteBack(count: Int) { repeat(count) { send(KeyCode.DEL) } }
         override fun typeKeys(text: String) { remote?.typeKeys(text) }
@@ -426,7 +479,11 @@ class MainActivity : Activity() {
         if (waiting) main.postDelayed(syncTimeout, SYNC_TIMEOUT_MS)
     }
 
+    /** The TV's currently open text box, as last reported (null when none is known). */
+    private var lastField: RemoteClient.TextField? = null
+
     private fun onTvTextField(field: RemoteClient.TextField?, opened: Boolean) {
+        if (opened || field != null) lastField = field
         if (field == null) {
             // The TV moved off a shared text field. Only auto-close what auto-opened.
             if (opened && keyboardAuto && keyboardBar.visibility == View.VISIBLE) hideKeyboardBar()
@@ -551,7 +608,7 @@ class MainActivity : Activity() {
     }
 
     private fun setStatus(text: String, status: Status, retry: Boolean = false) {
-        statusText.text = if (retry) "$text Tap to retry." else text
+        statusText.text = if (retry) "$text · Tap to retry" else text
         statusText.setTextColor(color(if (status == Status.ERROR) R.color.danger else R.color.muted))
         (statusDot.background as GradientDrawable).setColor(color(when (status) {
             Status.OK -> R.color.ok
@@ -563,6 +620,12 @@ class MainActivity : Activity() {
     }
 
     private fun showDevices(list: List<TvDevice>) {
+        if (remotePanel.visibility == View.VISIBLE) {
+            // Reconnecting: the saved TV turned up at a new address (routers reassign them).
+            val moved = list.firstOrNull { it.name == savedName && it.host != savedHost } ?: return
+            moveTv(savedHost ?: return, moved.host)
+            return
+        }
         deviceList.removeAllViews()
         searchingText.text = if (list.isEmpty()) "Searching for TVs on your network…" else "TVs found"
         list.forEach { tv ->
@@ -656,7 +719,7 @@ class MainActivity : Activity() {
         tvName = text("TV", 16f, R.color.text, bold = true).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
         val statusRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         statusDot = View(this).apply { background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(color(R.color.warn)) } }
-        statusText = text("Not connected", 12f, R.color.muted).apply { maxLines = 2 }
+        statusText = text("Not connected", 12f, R.color.muted).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
         statusRow.addView(statusDot, LinearLayout.LayoutParams(dp(7), dp(7)).apply { marginEnd = dp(6) })
         statusRow.addView(statusText, LinearLayout.LayoutParams(0, -2, 1f))
         titles.addView(tvName, LinearLayout.LayoutParams(-1, -2))
@@ -683,15 +746,24 @@ class MainActivity : Activity() {
         val controls = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         remoteControls = controls
 
-        // Back · Home · Menu
-        val menuButton = iconButton(R.drawable.ic_menu, "Menu", 56).apply {
-            bindTap(this) { pressMenu() }
+        // Media bar
+        val media = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = rounded(R.color.surface, 28)
+            setPadding(dp(6), dp(6), dp(6), dp(6))
         }
-        controls.addView(evenRow(
-            labeled(key(R.drawable.ic_back, "Back", KeyCode.BACK, Hold.LONG, 56), "Back"),
-            labeled(key(R.drawable.ic_home, "Home", KeyCode.HOME, Hold.LONG, 56), "Home"),
-            labeled(menuButton, "Menu"),
-        ), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(14) })
+        fun mediaKey(icon: Int, desc: String, code: Int, hold: Hold, accent: Boolean = false) =
+            media.addView(FrameLayout(this).apply {
+                addView(key(icon, desc, code, hold, 44,
+                    bg = if (accent) R.color.accent_container else null,
+                    tint = if (accent) R.color.accent else R.color.text),
+                    FrameLayout.LayoutParams(dp(if (accent) 64 else 56), dp(44), Gravity.CENTER))
+            }, LinearLayout.LayoutParams(0, dp(44), 1f))
+        mediaKey(R.drawable.ic_rew, "Rewind", KeyCode.MEDIA_REWIND, Hold.REPEAT)
+        mediaKey(R.drawable.ic_play_pause, "Play or pause", KeyCode.MEDIA_PLAY_PAUSE, Hold.NONE, accent = true)
+        mediaKey(R.drawable.ic_ff, "Fast forward", KeyCode.MEDIA_FAST_FORWARD, Hold.REPEAT)
+        controls.addView(media, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(14) })
 
         // Navigation: trackpad or D-pad
         // The navigation area takes whatever height is left, so tall phones get a bigger trackpad.
@@ -711,7 +783,12 @@ class MainActivity : Activity() {
             addView(key(R.drawable.ic_input, "Input source", KeyCode.TV_INPUT, Hold.NONE, 46),
                 LinearLayout.LayoutParams(dp(46), dp(46)).apply { topMargin = dp(9) })
             addView(iconButton(R.drawable.ic_keyboard, "Keyboard", 46).apply { setOnClickListener {
-                if (keyboardBar.visibility == View.VISIBLE) hideKeyboardBar() else showKeyboardBar("", auto = false)
+                if (keyboardBar.visibility == View.VISIBLE) hideKeyboardBar() else {
+                    val field = lastField
+                    // No text box reported (Netflix, Prime Video…): type key by key.
+                    if (field == null) remote?.forgetTextField()
+                    showKeyboardBar(field?.value ?: "", field?.label ?: "", auto = false)
+                }
             } },
                 LinearLayout.LayoutParams(dp(46), dp(46)).apply { topMargin = dp(9) })
         }
@@ -722,24 +799,15 @@ class MainActivity : Activity() {
                 text("CH", 12f, R.color.muted, bold = true).apply { gravity = Gravity.CENTER }),
         ), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(18) })
 
-        // Media bar
-        val media = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            background = rounded(R.color.surface, 28)
-            setPadding(dp(6), dp(6), dp(6), dp(6))
+        // Back · Home · Menu
+        val menuButton = iconButton(R.drawable.ic_menu, "Menu", 56).apply {
+            bindTap(this) { pressMenu() }
         }
-        fun mediaKey(icon: Int, desc: String, code: Int, hold: Hold, accent: Boolean = false) =
-            media.addView(FrameLayout(this).apply {
-                addView(key(icon, desc, code, hold, 44,
-                    bg = if (accent) R.color.accent_container else null,
-                    tint = if (accent) R.color.accent else R.color.text),
-                    FrameLayout.LayoutParams(dp(if (accent) 64 else 56), dp(44), Gravity.CENTER))
-            }, LinearLayout.LayoutParams(0, dp(44), 1f))
-        mediaKey(R.drawable.ic_rew, "Rewind", KeyCode.MEDIA_REWIND, Hold.REPEAT)
-        mediaKey(R.drawable.ic_play_pause, "Play or pause", KeyCode.MEDIA_PLAY_PAUSE, Hold.NONE, accent = true)
-        mediaKey(R.drawable.ic_ff, "Fast forward", KeyCode.MEDIA_FAST_FORWARD, Hold.REPEAT)
-        controls.addView(media, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(18) })
+        controls.addView(evenRow(
+            labeled(key(R.drawable.ic_back, "Back", KeyCode.BACK, Hold.LONG, 56), "Back"),
+            labeled(key(R.drawable.ic_home, "Home", KeyCode.HOME, Hold.LONG, 56), "Home"),
+            labeled(menuButton, "Menu"),
+        ), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
 
         col.addView(controls, LinearLayout.LayoutParams(-1, 0, 1f))
         showNavigation()
@@ -1357,7 +1425,7 @@ class MainActivity : Activity() {
 
     companion object {
         private const val NAV_HEIGHT = 208
-        private const val SYNC_TIMEOUT_MS = 450L
+        private const val SYNC_TIMEOUT_MS = 900L
         private const val KEY_HOST = "host"
         private const val KEY_NAME = "name"
         private const val KEY_PAIRED = "paired_hosts"

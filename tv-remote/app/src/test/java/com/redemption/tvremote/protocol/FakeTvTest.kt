@@ -95,6 +95,7 @@ class FakeTvTest {
 
         val client = PairingClient("127.0.0.1", phone, server.localPort)
         client.start("Test Phone")
+        assertEquals(tvIdentity.certificate.pin(), client.serverPin)
         assertTrue(codeShown.await(5, TimeUnit.SECONDS))
 
         val request = received.take()
@@ -234,6 +235,81 @@ class FakeTvTest {
         assertEquals(72, edit2.int(2))  // the newest field counter from the echo
 
         tv.join(5000); client.close(); server.close()
+    }
+
+    /** Minimal TV that completes the remote handshake for every connection it accepts. */
+    private fun handshakeTv(server: SSLServerSocket, connections: Int) = thread {
+        repeat(connections) {
+            runCatching {
+                (server.accept() as SSLSocket).use { s ->
+                    Framing.write(s.outputStream, ProtoWriter().message(1) { varint(1, 622) }.toByteArray())
+                    Framing.read(s.inputStream)
+                    Framing.write(s.outputStream, ProtoWriter().message(2) { varint(1, 622) }.toByteArray())
+                    Framing.read(s.inputStream)
+                }
+            }
+        }
+    }
+
+    private fun connectWithPin(port: Int, pin: String?): Triple<Boolean, Throwable?, RemoteClient> {
+        val ready = CountDownLatch(1)
+        val done = CountDownLatch(1)
+        var error: Throwable? = null
+        var gotReady = false
+        val client = RemoteClient("127.0.0.1", phone, object : RemoteClient.Listener {
+            override fun onReady() { gotReady = true; ready.countDown() }
+            override fun onDisconnected(error: Throwable?, beforeReady: Boolean) {
+                if (beforeReady) { error.let { e -> errorHolder = e }; done.countDown() }
+            }
+        }, port = port, expectedPin = pin)
+        client.connect()
+        val first = ready.await(5, TimeUnit.SECONDS) || done.await(1, TimeUnit.SECONDS)
+        error = errorHolder
+        return Triple(gotReady && first, error, client)
+    }
+    @Volatile private var errorHolder: Throwable? = null
+
+    @Test
+    fun certificatePinIsRecordedThenEnforced() {
+        val server = serverSocket()
+        handshakeTv(server, 3)
+        val tvPin = tvIdentity.certificate.pin()
+
+        // First use: no pin yet, the TV's certificate is accepted and reported.
+        val (ok1, _, c1) = connectWithPin(server.localPort, null)
+        assertTrue(ok1)
+        assertEquals(tvPin, c1.serverPin)
+        c1.close()
+
+        // Same TV, pinned: connects.
+        val (ok2, _, c2) = connectWithPin(server.localPort, tvPin)
+        assertTrue(ok2)
+        c2.close()
+
+        // A different certificate than the pinned one: refused before anything is sent.
+        errorHolder = null
+        val otherPin = ClientIdentity.generate("Impostor").certificate.pin()
+        val (ok3, err, c3) = connectWithPin(server.localPort, otherPin)
+        assertFalse(ok3)
+        assertTrue("expected a TLS failure, got $err", err is javax.net.ssl.SSLException)
+        c3.close()
+        server.close()
+    }
+
+    @Test
+    fun trustManagerRules() {
+        val tv = tvIdentity.certificate
+        val firstUse = PinnedTrustManager(null)
+        firstUse.checkServerTrusted(arrayOf(tv), "RSA")
+        assertEquals(tv.pin(), firstUse.seenPin)
+        PinnedTrustManager(tv.pin()).checkServerTrusted(arrayOf(tv), "RSA")
+        for (bad in listOf<() -> Unit>(
+            { PinnedTrustManager("00".repeat(32)).checkServerTrusted(arrayOf(tv), "RSA") },
+            { PinnedTrustManager(null).checkServerTrusted(emptyArray(), "RSA") },
+            { PinnedTrustManager(null).checkClientTrusted(arrayOf(tv), "RSA") },
+        )) {
+            try { bad(); org.junit.Assert.fail("should have thrown") } catch (_: java.security.cert.CertificateException) {}
+        }
     }
 
     @Test

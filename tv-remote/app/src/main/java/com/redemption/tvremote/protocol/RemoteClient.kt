@@ -17,7 +17,13 @@ class RemoteClient(
     private val deviceModel: String = "Phone",
     private val deviceVendor: String = "Android",
     private val port: Int = DEFAULT_PORT,
+    /** Fingerprint the TV's certificate must match; null to accept and record it (first use). */
+    private val expectedPin: String? = null,
 ) : Closeable {
+
+    /** Fingerprint of the TV's certificate on this connection, once connected. */
+    @Volatile var serverPin: String? = null
+        private set
 
     interface Listener {
         fun onReady() {}
@@ -57,6 +63,16 @@ class RemoteClient(
     /** True once the TV has told us which text field has focus. */
     val hasTextField: Boolean get() = hasImeCounter || hasFieldCounter
 
+    /** True once this TV has reported a field's contents back after an edit (Sony does). */
+    @Volatile var reportsEdits = false
+        private set
+
+    /** Drop text-field info that is no longer current (e.g. the user moved to another app). */
+    fun forgetTextField() {
+        hasImeCounter = false
+        hasFieldCounter = false
+    }
+
     fun connect() {
         Thread({ run() }, "tv-remote-reader").apply { isDaemon = true }.start()
     }
@@ -64,7 +80,9 @@ class RemoteClient(
     private fun run() {
         var error: Throwable? = null
         try {
-            val s = Tls.connect(host, port, identity)
+            val trust = PinnedTrustManager(expectedPin)
+            val s = Tls.connect(host, port, identity, trust)
+            serverPin = trust.seenPin
             socket = s
             s.soTimeout = 0 // the TV pings every few seconds; no read timeout needed
             if (closed) return
@@ -130,6 +148,7 @@ class RemoteClient(
             msg.has(F_IME_SHOW_REQUEST) -> msg.message(F_IME_SHOW_REQUEST)?.message(2)?.let { status ->
                 fieldCounter = status.int(1)
                 hasFieldCounter = true
+                reportsEdits = true
                 listener.onTextField(textField(status), opened = false)
             }
             msg.has(F_IME_BATCH_EDIT) -> msg.message(F_IME_BATCH_EDIT)?.let {
