@@ -117,11 +117,17 @@ class SonyBravia(val host: String, val psk: String, private val port: Int = 80) 
         }
     }
 
+    /** IPv6 literals need brackets in a URL, and a zone like %wlan0 must be escaped. */
+    internal fun urlFor(path: String): String {
+        val h = if (host.contains(':')) "[" + host.replace("%", "%25") + "]" else host
+        return "http://$h:$port$path"
+    }
+
     private fun post(
         path: String, body: String, auth: Boolean,
         contentType: String = "application/json; charset=UTF-8", soapAction: String? = null,
     ): String {
-        val conn = URL("http://$host:$port$path").openConnection() as HttpURLConnection
+        val conn = URL(urlFor(path)).openConnection() as HttpURLConnection
         try {
             conn.requestMethod = "POST"
             conn.connectTimeout = 4000

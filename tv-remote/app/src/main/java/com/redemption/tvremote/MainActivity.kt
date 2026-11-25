@@ -105,6 +105,7 @@ class MainActivity : Activity() {
     private lateinit var keyboardBar: View
     private lateinit var keyboardInput: EditText
     private lateinit var keyboardTitle: TextView
+    private lateinit var keyboardSearchRow: LinearLayout
 
     private val savedHost: String? get() = prefs.getString(KEY_HOST, null)
     private val savedName: String? get() = prefs.getString(KEY_NAME, null)
@@ -120,7 +121,8 @@ class MainActivity : Activity() {
 
     /** Sony IP-control client for the current TV, if a Pre-Shared Key has been set. */
     private fun sony(): SonyBravia? {
-        val host = savedHost ?: return null
+        // Sony IP control needs the TV's IPv4 address; fall back to the one it was set up with.
+        val host = savedHost?.takeIf { isIpv4(it) } ?: prefs.getString(KEY_SONY_HOST, null) ?: savedHost ?: return null
         val psk = sonyPsk ?: return null
         sonyClient?.let { if (it.host == host && it.psk == psk) return it }
         return SonyBravia(host, psk).also { sonyClient = it }
@@ -161,6 +163,9 @@ class MainActivity : Activity() {
     override fun onStart() {
         super.onStart()
         started = true
+        // Version 1.4 could save an IPv6 address for the TV, which broke Sony control.
+        // Look for the TV by name so we can switch back to its IPv4 address.
+        if (savedHost?.let { !isIpv4(it) } == true && remotePanel.visibility == View.VISIBLE) discovery.start()
         if (remotePanel.visibility == View.VISIBLE) savedHost?.let { connect(it) } else discovery.start()
     }
 
@@ -236,6 +241,7 @@ class MainActivity : Activity() {
             if (pin != null) prefs.edit().putString(pinKey(new), pin).apply()
         }
         sonyClient = null
+        if (prefs.contains(KEY_SONY_HOST)) prefs.edit().putString(KEY_SONY_HOST, new).apply()
         discovery.stop()
         connect(new)
     }
@@ -274,7 +280,8 @@ class MainActivity : Activity() {
                             if (remote !== client) return@post
                             // First connection after pairing: remember the TV's certificate.
                             if (pin == null) client.serverPin?.let { prefs.edit().putString(pinKey(host), it).apply() }
-                            discovery.stop()
+                            // Keep looking only if we're on a non-IPv4 address (see healAddress).
+                            if (isIpv4(host)) discovery.stop() else discovery.start()
                             setReady(true); setStatus("Connected", Status.OK)
                         }
                     }
@@ -462,7 +469,7 @@ class MainActivity : Activity() {
         override fun fieldGone() {
             lastField = null
             remote?.forgetTextField()
-            if (keyboardBar.visibility == View.VISIBLE) keyboardTitle.text = "Typing on TV (key by key)"
+            if (keyboardBar.visibility == View.VISIBLE) setKeyboardMode(KEYS_TITLE, keys = true)
         }
         override fun insert(text: String) { remote?.insertText(text) }
         override fun deleteBack(count: Int) { repeat(count) { send(KeyCode.DEL) } }
@@ -505,10 +512,10 @@ class MainActivity : Activity() {
         keyboardInput.setText(tvValue)
         keyboardInput.setSelection(tvValue.length)
         settingTextFromTv = false
-        keyboardTitle.text = when {
-            label.isNotBlank() -> "Typing on TV · $label"
-            remote?.hasTextField == true -> "Typing on TV"
-            else -> "Typing on TV (key by key)"
+        when {
+            label.isNotBlank() -> setKeyboardMode("Typing on TV · $label", keys = false)
+            remote?.hasTextField == true -> setKeyboardMode("Typing on TV", keys = false)
+            else -> setKeyboardMode(KEYS_TITLE, keys = true)
         }
         keyboardBar.visibility = View.VISIBLE
         keyboardInput.requestFocus()
@@ -516,6 +523,23 @@ class MainActivity : Activity() {
             (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
                 .showSoftInput(keyboardInput, InputMethodManager.SHOW_IMPLICIT)
         }
+    }
+
+    private fun setKeyboardMode(title: String, keys: Boolean) {
+        keyboardTitle.text = title
+        keyboardSearchRow.visibility = if (keys) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * Opens the TV's Google / Android TV search with [query] filled in, as an intent link sent
+     * through the remote protocol. Results include titles from Netflix, Prime Video and others.
+     */
+    private fun searchOnTv(query: String) {
+        val q = query.trim()
+        if (q.isEmpty()) return toast("Type what to search for first")
+        val r = remote?.takeIf { it.isReady } ?: return toast("Not connected to the TV")
+        r.openLink("intent:#Intent;action=android.search.action.GLOBAL_SEARCH;S.query=${Uri.encode(q)};end")
+        hideKeyboardBar()
     }
 
     private fun hideKeyboardBar() {
@@ -572,6 +596,20 @@ class MainActivity : Activity() {
             send(KeyCode.ENTER); hideKeyboardBar()
         }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
         bar.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
+
+        // Apps like Netflix and Prime Video draw their own keyboard and ignore remote typing.
+        // Offer the TV's own search instead; it finds titles in those apps too.
+        keyboardSearchRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            visibility = View.GONE
+        }
+        keyboardSearchRow.addView(text("App not taking your typing? (Netflix, Prime Video)", 12f, R.color.muted),
+            LinearLayout.LayoutParams(0, -2, 1f))
+        keyboardSearchRow.addView(chip("Search on TV", null, R.color.surface, R.color.text, small = true) {
+            searchOnTv(keyboardInput.text.toString())
+        }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
+        bar.addView(keyboardSearchRow, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
         return bar
     }
 
@@ -622,7 +660,7 @@ class MainActivity : Activity() {
     private fun showDevices(list: List<TvDevice>) {
         if (remotePanel.visibility == View.VISIBLE) {
             // Reconnecting: the saved TV turned up at a new address (routers reassign them).
-            val moved = list.firstOrNull { it.name == savedName && it.host != savedHost } ?: return
+            val moved = list.firstOrNull { it.name == savedName && it.host != savedHost && isIpv4(it.host) } ?: return
             moveTv(savedHost ?: return, moved.host)
             return
         }
@@ -799,13 +837,13 @@ class MainActivity : Activity() {
                 text("CH", 12f, R.color.muted, bold = true).apply { gravity = Gravity.CENTER }),
         ), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(18) })
 
-        // Back · Home · Menu
+        // Home · Back · Menu
         val menuButton = iconButton(R.drawable.ic_menu, "Menu", 56).apply {
             bindTap(this) { pressMenu() }
         }
         controls.addView(evenRow(
-            labeled(key(R.drawable.ic_back, "Back", KeyCode.BACK, Hold.LONG, 56), "Back"),
             labeled(key(R.drawable.ic_home, "Home", KeyCode.HOME, Hold.LONG, 56), "Home"),
+            labeled(key(R.drawable.ic_back, "Back", KeyCode.BACK, Hold.LONG, 56), "Back"),
             labeled(menuButton, "Menu"),
         ), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
 
@@ -1079,7 +1117,11 @@ class MainActivity : Activity() {
     }
 
     private fun testSony(psk: String, status: TextView) {
-        val host = savedHost ?: return
+        val host = savedHost?.takeIf { isIpv4(it) } ?: prefs.getString(KEY_SONY_HOST, null) ?: run {
+            status.setTextColor(color(R.color.danger))
+            status.text = "Choose your TV again from the TV list (tap the TV name at the top)."
+            return
+        }
         status.setTextColor(color(R.color.muted))
         status.text = "Checking…"
         web.execute {
@@ -1094,7 +1136,8 @@ class MainActivity : Activity() {
             }
             main.post {
                 if (result == null) {
-                    prefs.edit().putString(KEY_SONY_PSK, psk).putString(KEY_MENU_ACTION, MenuAction.SONY_ACTION_MENU.name).apply()
+                    prefs.edit().putString(KEY_SONY_PSK, psk).putString(KEY_MENU_ACTION, MenuAction.SONY_ACTION_MENU.name)
+                        .apply { if (isIpv4(host)) putString(KEY_SONY_HOST, host) }.apply()
                     sonyClient = null
                     toast("Sony IP control works. Menu now opens the Action Menu.")
                     renderSettings()
@@ -1426,6 +1469,7 @@ class MainActivity : Activity() {
     companion object {
         private const val NAV_HEIGHT = 208
         private const val SYNC_TIMEOUT_MS = 900L
+        private const val KEYS_TITLE = "Typing on TV (key by key)"
         private const val KEY_HOST = "host"
         private const val KEY_NAME = "name"
         private const val KEY_PAIRED = "paired_hosts"
@@ -1433,6 +1477,9 @@ class MainActivity : Activity() {
         private const val KEY_MENU_ACTION = "menu_action"
         private const val KEY_MENU_HINT_SHOWN = "menu_hint_shown"
         private const val KEY_SONY_PSK = "sony_psk"
+        private const val KEY_SONY_HOST = "sony_host"
+        private val IPV4 = Regex("""^\d{1,3}(\.\d{1,3}){3}$""")
+        fun isIpv4(host: String) = IPV4.matches(host)
         private const val KEY_SONY_ASKED = "sony_asked"
         const val PRIVACY_URL = "https://sasaboor64.github.io/Portfolio/tv-remote/privacy-policy.html"
         private val RECONNECT = Any()

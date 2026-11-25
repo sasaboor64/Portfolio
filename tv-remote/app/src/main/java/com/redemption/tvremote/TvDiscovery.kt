@@ -4,8 +4,11 @@ import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+
+import java.net.Inet4Address
 
 data class TvDevice(val name: String, val host: String)
 
@@ -67,8 +70,7 @@ class TvDiscovery(context: Context, private val onChanged: (List<TvDevice>) -> U
             }
 
             override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                @Suppress("DEPRECATION")
-                val host = serviceInfo.host?.hostAddress
+                val host = ipv4Of(serviceInfo)
                 main.post {
                     resolving = false
                     if (host != null && listener != null) {
@@ -82,6 +84,17 @@ class TvDiscovery(context: Context, private val onChanged: (List<TvDevice>) -> U
     }
 
     private fun publish() = onChanged(devices.values.toList())
+
+    /**
+     * The TV's IPv4 address. Newer Android versions often report an IPv6 (fe80::…) address
+     * first; Sony IP control and saved settings need the normal 192.168.x.x-style one, so
+     * IPv6-only results are skipped.
+     */
+    private fun ipv4Of(info: NsdServiceInfo): String? {
+        val addresses = if (Build.VERSION.SDK_INT >= 34) info.hostAddresses
+            else @Suppress("DEPRECATION") listOfNotNull(info.host)
+        return addresses.firstOrNull { it is Inet4Address }?.hostAddress
+    }
 
     companion object {
         const val SERVICE_TYPE = "_androidtvremote2._tcp."

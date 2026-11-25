@@ -91,6 +91,13 @@ class SonyBraviaTest {
         }
     }
 
+    @Test fun buildsValidUrlsForIpv6Addresses() {
+        // Android 14+ discovery may report the TV as fe80::…%wlan0; 1.4 built "http://fe80::1:80/…".
+        assertEquals("http://192.168.1.20:80/sony/ircc", SonyBravia("192.168.1.20", "1").urlFor("/sony/ircc"))
+        assertEquals("http://[fe80::1%25wlan0]:80/sony/ircc", SonyBravia("fe80::1%wlan0", "1").urlFor("/sony/ircc"))
+        java.net.URL(SonyBravia("fe80::1%wlan0", "1").urlFor("/sony/ircc")).toURI() // parses
+    }
+
     @Test fun listsAndLaunchesApps() {
         val apps = tv().apps()
         assertEquals(listOf("Netflix", "YouTube \"TV\""), apps.map { it.title })
