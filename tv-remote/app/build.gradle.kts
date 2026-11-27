@@ -17,7 +17,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.redemption.tvremote"
+        applicationId = "com.redemption.remoteplus"
         minSdk = 26
         targetSdk = 36
         versionCode = 7
