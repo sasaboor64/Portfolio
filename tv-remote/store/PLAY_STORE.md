@@ -23,23 +23,26 @@ Remote Plus turns your phone into a fast, clean remote for your smart TV. No ads
 
 WORKS WITH
 • Android TV and Google TV televisions and streaming boxes
-• Sony BRAVIA: extra support for the Action Menu (Quick Settings) and your TV's own app list
+• Sony BRAVIA, with extra support for the Action Menu (Quick Settings) and your TV's own app list
 
 FEATURES
-• Trackpad: swipe to move, tap for OK, hold for long-press. Prefer buttons? Switch to a classic D-pad.
+• Trackpad: swipe to move, tap for OK, hold for a long press. Prefer buttons? Switch to a classic D-pad any time.
+• Live keyboard: when a search box opens on the TV, your phone keyboard pops up and every letter appears on the TV as you type.
+• Search on TV: type a title and open your TV's search with it filled in, handy for apps with their own on-screen keyboard.
 • App shortcuts: open YouTube, Netflix, Prime Video and more with one tap. Add any app, reorder or remove them.
-• Sony BRAVIA: import the exact apps installed on your TV, and open the TV's Quick Settings bar (picture, sound, speakers) with the Menu button.
-• Volume and channel rockers that show your TV's volume. Your phone's own volume buttons control the TV, too.
-• Keyboard: type into search boxes on the TV instead of pecking at letters.
-• Power, Home, Back, Input, Mute, and play/pause, rewind and fast-forward.
+• Sony BRAVIA: import the exact apps installed on your TV, open the Quick Settings bar (picture, sound, speakers) with the Menu button, and switch the TV on from your phone.
+• Volume and channel rockers that show your TV's volume. Your phone's own volume buttons control the TV too.
+• Home, Menu, Back, Power, Input, Mute, plus play/pause, rewind and fast-forward.
 • Finds your TV automatically and reconnects every time you open the app.
 
 PRIVATE BY DESIGN
-The app talks only to your TV, over your home Wi-Fi. Nothing is sent anywhere else.
+The app talks only to your TV, over your home Wi-Fi. Nothing is sent anywhere else. Your TV is paired with a one-time code and recognised securely after that.
 
 SETUP
-Connect your phone to the same Wi-Fi as the TV, pick the TV, and type the code it shows. That's it.
-For Sony extras, turn on IP control on the TV (the app shows you how).
+1. Connect your phone to the same Wi-Fi as your TV.
+2. Tap "Choose a TV" and pick your TV.
+3. Type the code shown on the TV. Done.
+For Sony BRAVIA extras, turn on IP control on the TV. The app shows you how.
 
 Remote Plus is an independent app and is not affiliated with Google or Sony. Android TV and Google TV are trademarks of Google LLC. BRAVIA is a trademark of Sony Group Corporation.
 ```
