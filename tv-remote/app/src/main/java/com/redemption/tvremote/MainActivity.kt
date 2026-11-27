@@ -94,7 +94,6 @@ class MainActivity : Activity() {
     private lateinit var deviceList: LinearLayout
     private lateinit var searchingText: TextView
     private lateinit var hostInput: EditText
-    private lateinit var backToRemote: TextView
     private lateinit var navHost: FrameLayout
     private lateinit var navToggle: TextView
     private lateinit var volumeLabel: TextView
@@ -157,7 +156,8 @@ class MainActivity : Activity() {
         if (Build.VERSION.SDK_INT >= 33) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) { handleBack() }
         }
-        if (savedHost != null) showRemotePanel() else showDevicesPanel()
+        // Always open on the controls; the TV box at the top left is where you connect.
+        showRemotePanel()
     }
 
     override fun onStart() {
@@ -166,7 +166,8 @@ class MainActivity : Activity() {
         // Version 1.4 could save an IPv6 address for the TV, which broke Sony control.
         // Look for the TV by name so we can switch back to its IPv4 address.
         if (savedHost?.let { !isIpv4(it) } == true && remotePanel.visibility == View.VISIBLE) discovery.start()
-        if (remotePanel.visibility == View.VISIBLE) savedHost?.let { connect(it) } else discovery.start()
+        if (remotePanel.visibility == View.VISIBLE) savedHost?.let { connect(it) } ?: showNoTv()
+        else if (devicesPanel.visibility == View.VISIBLE) discovery.start()
     }
 
     override fun onStop() {
@@ -187,7 +188,7 @@ class MainActivity : Activity() {
         when {
             keyboardBar.visibility == View.VISIBLE -> hideKeyboardBar()
             settingsPanel.visibility == View.VISIBLE -> closeSettings()
-            devicesPanel.visibility == View.VISIBLE && savedHost != null -> { showRemotePanel(); savedHost?.let { connect(it) } }
+            devicesPanel.visibility == View.VISIBLE -> leaveDevices()
             else -> finish()
         }
     }
@@ -412,6 +413,10 @@ class MainActivity : Activity() {
     private fun send(code: Int, direction: KeyDirection = KeyDirection.SHORT) {
         val r = remote?.takeIf { it.isReady }
         if (r != null) { r.sendKey(code, direction); return }
+        if (savedHost == null) {
+            if (direction != KeyDirection.END_LONG) toast("Tap the box at the top left to connect a TV")
+            return
+        }
         if (code == KeyCode.POWER) powerOnViaSony()
     }
 
@@ -618,14 +623,27 @@ class MainActivity : Activity() {
     private fun showRemotePanel() {
         devicesPanel.visibility = View.GONE
         remotePanel.visibility = View.VISIBLE
-        tvName.text = savedName ?: savedHost ?: "TV"
+        tvName.text = savedName ?: savedHost ?: "Choose a TV"
+        if (savedHost == null) showNoTv()
+    }
+
+    /** No TV chosen yet: the controls stay visible, the top-left box invites you to connect. */
+    private fun showNoTv() {
+        tvName.text = "Choose a TV"
+        setStatus("Tap here to connect", Status.BUSY)
+    }
+
+    /** Back from the TV list to the remote, reconnecting to the saved TV if there is one. */
+    private fun leaveDevices() {
+        discovery.stop()
+        showRemotePanel()
+        savedHost?.let { connect(it) }
     }
 
     private fun showDevicesPanel() {
         disconnect()
         remotePanel.visibility = View.GONE
         devicesPanel.visibility = View.VISIBLE
-        backToRemote.visibility = if (savedHost != null) View.VISIBLE else View.GONE
         if (started) discovery.start()
     }
 
@@ -678,7 +696,8 @@ class MainActivity : Activity() {
             row.addView(LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 addView(text(tv.name, 16f, R.color.text, bold = true), wrap())
-                addView(text(tv.host, 13f, R.color.muted), wrap())
+                addView(text(if (tv.host == savedHost) "Current TV · ${tv.host}" else tv.host, 13f,
+                    if (tv.host == savedHost) R.color.ok else R.color.muted), wrap())
             }, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(14) })
             deviceList.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         }
@@ -689,9 +708,14 @@ class MainActivity : Activity() {
     private fun buildDevicesPanel(): View {
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(28), dp(20), dp(24))
+            setPadding(dp(20), dp(8), dp(20), dp(24))
         }
-        col.addView(text("Choose your TV", 26f, R.color.text, bold = true), wrap())
+        val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        header.addView(iconButton(R.drawable.ic_back, "Back to remote", 48, bg = null).apply { setOnClickListener { leaveDevices() } },
+            LinearLayout.LayoutParams(dp(48), dp(48)))
+        header.addView(text("Choose your TV", 22f, R.color.text, bold = true),
+            LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
+        col.addView(header, LinearLayout.LayoutParams(-1, -2).apply { marginStart = -dp(12) })
         col.addView(text("Your phone and the TV need to be on the same Wi-Fi network.", 14f, R.color.muted),
             LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6); bottomMargin = dp(24) })
         searchingText = text("Searching for TVs on your network…", 13f, R.color.muted)
@@ -719,12 +743,10 @@ class MainActivity : Activity() {
             LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(10) })
         col.addView(row, LinearLayout.LayoutParams(-1, -2))
 
-        backToRemote = chip("Back to remote", R.drawable.ic_back) { showRemotePanel(); savedHost?.let { connect(it) } }
-        col.addView(backToRemote, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(28) })
         col.addView(chip("Forget paired TVs", null) {
             prefs.edit().remove(KEY_PAIRED).remove(KEY_HOST).remove(KEY_NAME).apply()
-            backToRemote.visibility = View.GONE
-        }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(10) })
+            toast("Forgot all paired TVs")
+        }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(28) })
 
         return ScrollView(this).apply { addView(col, FrameLayout.LayoutParams(-1, -2)) }
     }
@@ -837,14 +859,14 @@ class MainActivity : Activity() {
                 text("CH", 12f, R.color.muted, bold = true).apply { gravity = Gravity.CENTER }),
         ), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(18) })
 
-        // Home · Back · Menu
+        // Home · Menu · Back
         val menuButton = iconButton(R.drawable.ic_menu, "Menu", 56).apply {
             bindTap(this) { pressMenu() }
         }
         controls.addView(evenRow(
             labeled(key(R.drawable.ic_home, "Home", KeyCode.HOME, Hold.LONG, 56), "Home"),
-            labeled(key(R.drawable.ic_back, "Back", KeyCode.BACK, Hold.LONG, 56), "Back"),
             labeled(menuButton, "Menu"),
+            labeled(key(R.drawable.ic_back, "Back", KeyCode.BACK, Hold.LONG, 56), "Back"),
         ), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
 
         col.addView(controls, LinearLayout.LayoutParams(-1, 0, 1f))
